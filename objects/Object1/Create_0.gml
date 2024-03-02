@@ -1,0 +1,1 @@
+dungeon = new Dungeon(room_width div 24, room_height div 24);
