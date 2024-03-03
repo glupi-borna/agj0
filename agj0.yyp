@@ -37,7 +37,10 @@
   },
   "name":"agj0",
   "resources":[
+    {"id":{"name":"ui","path":"scripts/ui/ui.yy",},},
     {"id":{"name":"Object1","path":"objects/Object1/Object1.yy",},},
+    {"id":{"name":"math","path":"scripts/math/math.yy",},},
+    {"id":{"name":"game","path":"scripts/game/game.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
     {"id":{"name":"dun_gen","path":"scripts/dun_gen/dun_gen.yy",},},
     {"id":{"name":"utils","path":"scripts/utils/utils.yy",},},
