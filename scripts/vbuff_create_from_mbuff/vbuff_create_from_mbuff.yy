@@ -6,7 +6,7 @@
   "name":"vbuff_create_from_mbuff",
   "parent":{
     "name":"Model buffers",
-    "path":"folders/SMF/SMF/Supplementary scripts/Model buffers.yy",
+    "path":"folders/Scripts/SMF/SMF/Supplementary scripts/Model buffers.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

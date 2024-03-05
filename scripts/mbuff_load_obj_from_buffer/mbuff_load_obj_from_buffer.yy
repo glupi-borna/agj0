@@ -6,7 +6,7 @@
   "name":"mbuff_load_obj_from_buffer",
   "parent":{
     "name":"Model buffers",
-    "path":"folders/SMF/SMF/Supplementary scripts/Model buffers.yy",
+    "path":"folders/Scripts/SMF/SMF/Supplementary scripts/Model buffers.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

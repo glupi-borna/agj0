@@ -6,7 +6,7 @@
   "name":"texpack_remove_sprite",
   "parent":{
     "name":"Textures",
-    "path":"folders/SMF/SMF/Supplementary scripts/Model buffers/Textures.yy",
+    "path":"folders/Scripts/SMF/SMF/Supplementary scripts/Model buffers/Textures.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

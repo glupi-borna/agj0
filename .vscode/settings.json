@@ -1,0 +1,8 @@
+{
+    "files.exclude": {
+        "**/*.yy": true
+    },
+    "stitch.diagnostics.suppressGroups": [
+        "Scripts/SMF"
+    ]
+}

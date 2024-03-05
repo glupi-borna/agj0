@@ -6,7 +6,7 @@
   "name":"_mbuff_read_obj_line",
   "parent":{
     "name":"Supplementary scripts",
-    "path":"folders/SMF/SMF/Supplementary scripts/Model buffers/Supplementary scripts.yy",
+    "path":"folders/Scripts/SMF/SMF/Supplementary scripts/Model buffers/Supplementary scripts.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

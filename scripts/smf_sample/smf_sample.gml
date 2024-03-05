@@ -1428,10 +1428,10 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	/*///////////////////////////////////////////////////////////
 		Convert the parent's matrix into dual quaternion
 	*////////////////////////////////////////////////////////////
-	var T = 1. + M0 + M5 + M10;
-	if (T > 0.)
+	var T = 1.0 + M0 + M5 + M10;
+	if (T > 0.0)
 	{
-	    var S = sqrt(T) * 2.;
+	    var S = sqrt(T) * 2.0;
 	    var Q0 = (M9 - M6) / S;
 	    var Q1 = (M2 - M8) / S;
 	    var Q2 = (M4 - M1) / S;
@@ -1439,7 +1439,7 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	}
 	else if (M0 > M5 && M0 > M10)
 	{// Column 0: 
-	    var S = sqrt(1. + M0 - M5 - M10) * 2.;
+	    var S = sqrt(1.0 + M0 - M5 - M10) * 2.0;
 	    var Q0 = .25 * S;
 	    var Q1 = (M4 + M1) / S;
 	    var Q2 = (M2 + M8) / S;
@@ -1447,7 +1447,7 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	} 
 	else if (M5 > M10)
 	{// Column 1: 
-	    var S = sqrt(1. + M5 - M0 - M10) * 2.;
+	    var S = sqrt(1.0 + M5 - M0 - M10) * 2.0;
 	    var Q0 = (M4 + M1) / S;
 	    var Q1 = .25 * S;
 	    var Q2 = (M9 + M6) / S;
@@ -1455,13 +1455,13 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	} 
 	else 
 	{// Column 2:
-	    var S  = sqrt(1. + M10 - M0 - M5) * 2.;
+	    var S  = sqrt(1.0 + M10 - M0 - M5) * 2.0;
 	    var Q0 = (M2 + M8) / S;
 	    var Q1 = (M9 + M6) / S;
 	    var Q2 = .25 * S;
 	    var Q3 = (M4 - M1) / S;
 	}
-	if (Q0 * P0 + Q1 * P1 + Q2 * P2 + Q3 * P3 < 0.)
+	if (Q0 * P0 + Q1 * P1 + Q2 * P2 + Q3 * P3 < 0.0)
 	{
 		Q0 = -Q0;
 		Q1 = -Q1;
@@ -1553,10 +1553,10 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	/*///////////////////////////////////////////////////////////
 		Convert the child's matrix into dual quaternion
 	*////////////////////////////////////////////////////////////
-	var T = 1. + M0 + M5 + M10;
-	if (T > 0.)
+	var T = 1.0 + M0 + M5 + M10;
+	if (T > 0.0)
 	{
-	    var S = sqrt(T) * 2.;
+	    var S = sqrt(T) * 2.0;
 	    Q0 = (M9 - M6) / S;
 	    Q1 = (M2 - M8) / S;
 	    Q2 = (M4 - M1) / S;
@@ -1564,7 +1564,7 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	}
 	else if (M0 > M5 && M0 > M10)
 	{// Column 0: 
-	    var S = sqrt(1. + M0 - M5 - M10) * 2.;
+	    var S = sqrt(1.0 + M0 - M5 - M10) * 2.0;
 	    Q0 = .25 * S;
 	    Q1 = (M4 + M1) / S;
 	    Q2 = (M2 + M8) / S;
@@ -1572,7 +1572,7 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	} 
 	else if (M5 > M10)
 	{// Column 1: 
-	    var S = sqrt(1. + M5 - M0 - M10) * 2.;
+	    var S = sqrt(1.0 + M5 - M0 - M10) * 2.0;
 	    Q0 = (M4 + M1) / S;
 	    Q1 = .25 * S;
 	    Q2 = (M9 + M6) / S;
@@ -1580,13 +1580,13 @@ function sample_node_ik(rig, nodeInd, sample, newX, newY, newZ, moveFromCurrent,
 	} 
 	else 
 	{// Column 2:
-	    var S  = sqrt(1. + M10 - M0 - M5) * 2.;
+	    var S  = sqrt(1.0 + M10 - M0 - M5) * 2.0;
 	    Q0 = (M2 + M8) / S;
 	    Q1 = (M9 + M6) / S;
 	    Q2 = .25 * S;
 	    Q3 = (M4 - M1) / S;
 	}
-	if (Q0 * C0 + Q1 * C1 + Q2 * C2 + Q3 * C3 < 0.)
+	if (Q0 * C0 + Q1 * C1 + Q2 * C2 + Q3 * C3 < 0.0)
 	{
 		Q0 = -Q0;
 		Q1 = -Q1;
@@ -1826,7 +1826,7 @@ function sample_node_ik_fast(rig, nodeInd, sample, newX, newY, newZ, moveFromCur
 	var p_csqr = p_c * p_c;
 	var g_psqr = g_p * g_p;
 	var intersectionRadius = sqrt(max(p_csqr - sqr(g_psqr - p_csqr - g_nsqr) / (4 * g_nsqr), 0));
-	var l = sqrt(max(g_psqr - intersectionRadius * intersectionRadius, 0.)) / g_n;
+	var l = sqrt(max(g_psqr - intersectionRadius * intersectionRadius, 0.0)) / g_n;
 	if (g_nsqr < p_csqr - g_psqr){l = -l;} //If the child is too close to the grandparent, the "middle" point is on the other side of the grandparent, and l must be negative
 	var middleX = Gx + GtoNx * l;
 	var middleY = Gy + GtoNy * l;
@@ -1923,7 +1923,7 @@ function sample_node_ik_fast(rig, nodeInd, sample, newX, newY, newZ, moveFromCur
 		Convert the parent's matrix into dual quaternion
 	*////////////////////////////////////////////////////////////
 	var T = 1 + M0 + M5 + M10;
-	if (T > 0.)
+	if (T > 0.0)
 	{
 	    var S = sqrt(T) * 2;
 	    var Q0 = (M9 - M6) / S;
@@ -2091,7 +2091,7 @@ function sample_node_ik_fast(rig, nodeInd, sample, newX, newY, newZ, moveFromCur
 		Convert the child's matrix into dual quaternion
 	*////////////////////////////////////////////////////////////
 	var T = 1 + M0 + M5 + M10;
-	if (T > 0.)
+	if (T > 0.0)
 	{
 	    var S = sqrt(T) * 2;
 	    Q0 = (M9 - M6) / S;

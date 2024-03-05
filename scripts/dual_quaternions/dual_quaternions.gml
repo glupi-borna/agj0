@@ -24,7 +24,7 @@ function smf_dq_create_from_matrix(M, DQ)
 	//Source: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
 	//Creates a dual quaternion from a matrix
 	var T = 1 + M[0] + M[5] + M[10]
-	if (T > 0.)
+	if (T > 0.0)
 	{
 	    var S = sqrt(T) * 2;
 	    DQ[@ 0] = (M[9] - M[6]) / S;
@@ -34,7 +34,7 @@ function smf_dq_create_from_matrix(M, DQ)
 	}
 	else if (M[0] > M[5] && M[0] > M[10])
 	{// Column 0: 
-	   var S = sqrt(max(0., 1.0 + M[0] - M[5] - M[10])) * 2;
+	   var S = sqrt(max(0.0, 1.0 + M[0] - M[5] - M[10])) * 2;
 	    DQ[@ 0] = 0.25 * S;
 	    DQ[@ 1] = (M[4] + M[1]) / S;
 	    DQ[@ 2] = (M[2] + M[8]) / S;
@@ -42,7 +42,7 @@ function smf_dq_create_from_matrix(M, DQ)
 	} 
 	else if (M[5] > M[10])
 	{// Column 1: 
-	    var S = sqrt(max(0., 1.0 + M[5] - M[0] - M[10])) * 2;
+	    var S = sqrt(max(0.0, 1.0 + M[5] - M[0] - M[10])) * 2;
 	    DQ[@ 0] = (M[4] + M[1]) / S;
 	    DQ[@ 1] = 0.25 * S;
 	    DQ[@ 2] = (M[9] + M[6]) / S;
@@ -50,7 +50,7 @@ function smf_dq_create_from_matrix(M, DQ)
 	} 
 	else 
 	{// Column 2:
-		var S  = sqrt(max(0., 1.0 + M[10] - M[0] - M[5])) * 2;
+		var S  = sqrt(max(0.0, 1.0 + M[10] - M[0] - M[5])) * 2;
 	    DQ[@ 0] = (M[2] + M[8]) / S;
 	    DQ[@ 1] = (M[9] + M[6]) / S;
 	    DQ[@ 2] = 0.25 * S;

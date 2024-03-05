@@ -5,7 +5,7 @@ function smf_quat_create_from_matrix(M, targetQ) {
 	//---------------Create orientation quaternion from the top left 3x3 part of the matrix
 	//Source: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
 	var T = 1 + M[0] + M[5] + M[10]
-	if (T > 0.)
+	if (T > 0.0)
 	{
 	    var S = sqrt(T) * 2;
 	    Q[@ 0] = (M[9] - M[6]) / S;
@@ -87,8 +87,8 @@ function smf_quat_transform_vector(Q, vx, vy, vz) {
 	var crossY = Q[2] * vx - Q[0] * vz + Q[3] * vy;
 	var crossZ = Q[0] * vy - Q[1] * vx + Q[3] * vz;
 	var r = global.animTempV;
-	r[@ 0] = vx + 2. * Q[1] * crossZ - Q[2] * crossY;
-	r[@ 1] = vy + 2. * Q[2] * crossX - Q[0] * crossZ;
-	r[@ 2] = vz + 2. * Q[0] * crossY - Q[1] * crossX;
+	r[@ 0] = vx + 2.0 * Q[1] * crossZ - Q[2] * crossY;
+	r[@ 1] = vy + 2.0 * Q[2] * crossX - Q[0] * crossZ;
+	r[@ 2] = vz + 2.0 * Q[0] * crossY - Q[1] * crossX;
 	return r;
 }

@@ -6,7 +6,7 @@
   "name":"smf_model",
   "parent":{
     "name":"SMF",
-    "path":"folders/SMF/SMF.yy",
+    "path":"folders/Scripts/SMF/SMF.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",
