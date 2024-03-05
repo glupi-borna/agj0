@@ -1,0 +1,13 @@
+{
+  "$GMScript":"",
+  "%Name":"smf_model",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"smf_model",
+  "parent":{
+    "name":"SMF",
+    "path":"folders/SMF/SMF.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

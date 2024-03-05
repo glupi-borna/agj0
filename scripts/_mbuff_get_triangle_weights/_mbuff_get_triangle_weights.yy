@@ -1,0 +1,13 @@
+{
+  "$GMScript":"",
+  "%Name":"_mbuff_get_triangle_weights",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"_mbuff_get_triangle_weights",
+  "parent":{
+    "name":"Supplementary scripts",
+    "path":"folders/SMF/SMF/Supplementary scripts/Model buffers/Supplementary scripts.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
