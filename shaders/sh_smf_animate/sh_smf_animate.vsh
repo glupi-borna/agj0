@@ -75,7 +75,7 @@ void main()
 	vec4 objectSpacePos = vec4(anim_transform(in_Position), 1.0);
 	vec4 animNormal = vec4(anim_rotate(in_Normal), 0.);
 	/////////////////////////////////////////////////////////////////////////////////////////////
-	
+
     gl_Position = gm_Matrices[MATRIX_WORLD_VIEW_PROJECTION] * objectSpacePos;
 	vec3 tangent = 2. * in_Colour.rgb - 1.; //This is not used for anything in this particular shader
 	vec3 camPos = - (gm_Matrices[MATRIX_VIEW][3] * gm_Matrices[MATRIX_VIEW]).xyz;

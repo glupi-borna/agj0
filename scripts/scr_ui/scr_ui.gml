@@ -19,14 +19,16 @@ function UI_Container(_old_dir, _dir, _cursor, _parent) constructor {
     }
 }
 
+enum INPUT_MODE { POINTER, BUTTONS };
+
 function UI() constructor {
     cursor = new v2(0, 0);
 
     /// @type {Struct.UI_Container}
     container = undefined;
     active = "-";
+    focused = "-";
     last = "-";
-    kbd_focus = "-";
     focus_changed = false;
     focus = {
         left: "-",
@@ -35,7 +37,15 @@ function UI() constructor {
         down: "-"
     };
 
+    input_mode = INPUT_MODE.BUTTONS;
+
     static start_frame = function() {
+        if (keyboard_check_pressed(vk_anykey)) {
+            input_mode = INPUT_MODE.BUTTONS;
+        } else if (window_mouse_get_delta_x()>5 || window_mouse_get_delta_y()>5 || mouse_check_button_pressed(mb_any)) {
+            input_mode = INPUT_MODE.POINTER;
+        }
+
         cursor.x = 0;
         cursor.y = 0;
         container = start_col();
@@ -73,15 +83,16 @@ function UI() constructor {
 
     static set_focus = function(name) {
         if (focus_changed) return;
-        if (kbd_focus == name) return;
+        if (focused == name) return;
         focus_changed = true;
-        kbd_focus = name;
+        focused = name;
     }
 
     static kbd_focus_interaction = function (id) {
         last = id;
-        if (kbd_focus == "-") set_focus(id);
-        if (kbd_focus != id) return;
+        if (input_mode != INPUT_MODE.BUTTONS) return;
+        if (focused == "-") set_focus(id);
+        if (focused != id) return;
         if (keyboard_check_pressed(vk_left) && focus.left != "-") set_focus(focus.left);
         if (keyboard_check_pressed(vk_right) && focus.right != "-") set_focus(focus.right);
         if (keyboard_check_pressed(vk_down) && focus.down != "-") set_focus(focus.down);
@@ -164,13 +175,15 @@ function UI() constructor {
         var x2 = cursor.x + w;
         var y2 = cursor.y + h;
 
-        var is_focused = kbd_focus == id;
+        var is_focused = focused == id;
         var is_active = active == id;
         var is_hovered = false;
         var clicked = false;
 
         if (point_in_rectangle(WMX, WMY, cursor.x, cursor.y, x2, y2)) {
             is_hovered = true;
+
+            if (input_mode == INPUT_MODE.POINTER) set_focus(id);
 
             if (active == "-" && mouse_check_button_pressed(mb_left)) {
                 active = id;
@@ -205,4 +218,14 @@ function UI() constructor {
 
         return clicked;
     }
+}
+
+function ui_anim(start_time, current_time, duration) {
+    return clamp(current_time - start_time, 0, duration)/duration;
+}
+
+/// @param {real} x
+function ease_io_cubic(x) {
+    if (x<0.5) return 4*x*x*x;
+    else return 1-power(-2*x+2,3)/2;
 }

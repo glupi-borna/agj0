@@ -76,12 +76,7 @@ function Rect(_x, _y, _w, _h) constructor {
 	/// @param {real} py
 	/// @returns {bool}
 	static contains_point = function (px, py) {
-		var xoff = px - x;
-		var yoff = py - y;
-		return (
-			xoff >= 0 && xoff < x+w &&
-			yoff >= 0 && yoff < y+h
-		);
+		return point_in_rectangle(px, py, x, y, x+w-1, y+h-1);
 	}
 
 	/// @param {Struct.Rect} r
@@ -131,17 +126,17 @@ function v3(_x, _y, _z) constructor {
     /// @param {real} _y
     /// @param {real} _z
     static add = function(_x, _y, _z) {
-        x -= _x;
-        y -= _y;
-        z -= _z;
+        x += _x;
+        y += _y;
+        z += _z;
         return self;
     }
 
     /// @param {Struct.v3} v
     static addv = function(v) {
-        x -= v.x;
-        y -= v.y;
-        z -= v.z;
+        x += v.x;
+        y += v.y;
+        z += v.z;
         return self;
     }
 
@@ -198,6 +193,11 @@ function v3(_x, _y, _z) constructor {
 		y *= amt;
 		z *= amt;
 		return self;
+	}
+
+    /// @param {Struct.v3} v
+	static eq = function(v) {
+		return x==v.x && y==v.y && z==v.z;
 	}
 
 	static toString = function() {

@@ -1,16 +1,29 @@
-#macro print show_debug_message
-// #macro print noop
+#macro _print show_debug_message
+// #macro _print noop
 #macro assert __assert_impl
 // #macro assert noop
 
+// #macro print noop
+/// @param {ArgumentIdentity} [...]
+function print() {
+	var str = "";
+	for (var i=0; i<argument_count; i++) {
+		str += string(argument[i]) + " ";
+	}
+	_print(str);
+}
+
 #macro WMX window_mouse_get_x()
 #macro WMY window_mouse_get_y()
+#macro WW window_get_width()
+#macro WH window_get_height()
 
 function noop() {}
 
 function __assert_impl(condition, msg) {
 	if (!condition) {
 		show_message(msg);
+		print("ASSERTION ERROR", msg);
 		game_end(1);
 	}
 }
@@ -105,47 +118,94 @@ vertex_begin(global.v_wall, global.vertex_format);
 	vtx_norm(0, 1, 0);
 	vtx_rgba(#ffffff, 1);
 
-	vtx_pos(0, 0, 1);
-	vtx_tex(0, 0);
-	vtx_point(global.v_wall);
-
-	vtx_pos(1, 0, 1);
-	vtx_tex(1, 0);
-	vtx_point(global.v_wall);
-
 	vtx_pos(1, 0, 0);
-	vtx_tex(1, 1);
-	vtx_point(global.v_wall);
-	vtx_point(global.v_wall);
+	vtx_tex(1, 10);
+	vtx_point(global.v_wall); // 1
+
+	vtx_pos(1, 0, 10);
+	vtx_tex(1, 0);
+	vtx_point(global.v_wall); // 2
+
+	vtx_pos(0, 0, 10);
+	vtx_tex(0, 0);
+	vtx_point(global.v_wall); // 3
+	vtx_point(global.v_wall); // 4
 
 	vtx_pos(0, 0, 0);
-	vtx_tex(0, 1);
-	vtx_point(global.v_wall);
-
-	vtx_pos(0, 0, 1);
-	vtx_tex(0, 0);
-	vtx_point(global.v_wall);
-
-	vtx_norm(0, -1, 0);
-
-	vtx_pos(1, 0, 1);
-	vtx_tex(0, 0);
-	vtx_point(global.v_wall);
-
-	vtx_pos(0, 0, 1);
-	vtx_tex(1, 0);
-	vtx_point(global.v_wall);
-
-	vtx_pos(0, 0, 0);
-	vtx_tex(1, 1);
-	vtx_point(global.v_wall);
-	vtx_point(global.v_wall);
+	vtx_tex(0, 10);
+	vtx_point(global.v_wall); // 5
 
 	vtx_pos(1, 0, 0);
-	vtx_tex(0, 1);
-	vtx_point(global.v_wall);
+	vtx_tex(1, 10);
+	vtx_point(global.v_wall); // 6
 
-	vtx_pos(1, 0, 1);
-	vtx_tex(0, 0);
-	vtx_point(global.v_wall);
+
 vertex_end(global.v_wall);
+
+/// @param {Function} _fn
+/// @param {Array} _args
+/// @param {Any} _this
+function Callback(_fn, _args, _this) constructor {
+	fn_val = _fn;
+	args = _args;
+	this_val = _this;
+
+	static call = function() {
+		method_call(method(this_val, fn_val), args);
+	}
+}
+
+global.async_cb_map = ds_map_create();
+
+/// @param {real} async_id
+/// @param {Struct.Callback} callback
+function on_async(async_id, callback) {
+	/// @type {Array<Struct.Callback>}
+	var cbs = ds_map_find_value(global.async_cb_map, async_id);
+	if (is_undefined(cbs)) {
+		/// @type {Array<Struct.Callback>}
+		cbs = [];
+		global.async_cb_map[? async_id] = cbs;
+	}
+	array_push(cbs, callback);
+}
+
+function async_done(async_id) {
+	/// @type {Array<Struct.Callback>}
+	var cbs = ds_map_find_value(global.async_cb_map, async_id);
+	if (is_undefined(cbs)) return;
+	ds_map_delete(global.async_cb_map, async_id);
+	for (var i=0; i<array_length(cbs); i++) {
+		cbs[i].call();
+	}
+}
+
+function do_3d() {
+	ensure_pixelation();
+    gpu_set_ztestenable(true);
+    gpu_set_zwriteenable(true);
+	gpu_set_cullmode(cull_counterclockwise);
+    gpu_set_fog(true, c_black, 0, 300);
+	gpu_set_tex_repeat(true);
+}
+
+
+function do_2d() {
+	ensure_pixelation();
+    gpu_set_ztestenable(false);
+    gpu_set_zwriteenable(false);
+    gpu_set_fog(false, c_white, 0, 300);
+	gpu_set_tex_repeat(false);
+}
+
+function ensure_pixelation() {
+	if (
+		surface_get_width(application_surface) != floor(WW/2) ||
+		surface_get_height(application_surface) != floor(WH/2) ||
+		display_get_gui_width() != WW ||
+		display_get_gui_height() != WH
+	) {
+		surface_resize(application_surface, WW/2, WH/2);
+		display_set_gui_size(WW, WH);
+	}
+}

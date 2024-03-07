@@ -1,1 +1,1 @@
-global.game_state.update();
+update_game_state();

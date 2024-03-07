@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureGroup>
+  <texture scale="1" mipsToGenerate="0" texwidth="256" texheight="256">default_0.bz2</texture>
+  <texture scale="1" mipsToGenerate="0" texwidth="64" texheight="64">default_1.bz2</texture>
+  <texture scale="1" mipsToGenerate="0" texwidth="64" texheight="64">default_2.bz2</texture>
+  <tpe x="0" y="0" tpage="default_0.bz2">spr_player_c547e27d-17b3-4e5f-a9ff-3056dc84a0d6.tpe</tpe>
+  <tpe x="0" y="0" tpage="default_1.bz2">spr_arrow_63a64689-3b6c-4a8b-87c1-96eafad7cc0e.tpe</tpe>
+  <tpe x="0" y="0" tpage="default_2.bz2">spr_floor_brick_e81dcc46-6278-4d17-951f-6f130bb0b41b.tpe</tpe>
+</TextureGroup>
