@@ -110,6 +110,36 @@ function Dungeon_Player() constructor {
     pos = new v3(0, 0, 0);
     fwd = new v3(1, 1, 0).normalize();
     inventory = new Inventory();
+
+    /// @param {Struct.Dungeon} d
+    /// @param {real} x
+    /// @param {real} y
+    static collision = function (d, x, y) {
+        var px = pos.x + x;
+        var py = pos.y + y;
+        var xx = floor(px/48);
+        var yy = floor(py/48);
+
+        for (var i=-1; i<=1; i++) {
+            var tx = xx+i;
+            for (var j=-1; j<=1; j++) {
+                var ty = yy+j;
+                var t = d.tile_at(tx, ty);
+                var c = t.collider();
+                if (is_undefined(c)) continue;
+                var rx = tx * 48;
+                var ry = ty * 48;
+                var cx = rx + 48*c.x;
+                var cy = ry + 48*c.y;
+                var cw = 48*c.w;
+                var ch = 48*c.h;
+                if (rectangle_in_circle(cx, cy, cx+cw, cy+ch, px, py, 6) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
 }
 
 function GS_Dungeon() : Game_State() constructor {
@@ -159,8 +189,8 @@ function GS_Dungeon() : Game_State() constructor {
         var walk_speed = 2;
         if (keyboard_check(vk_up)) player.pos.add(0, 0, 2);
         if (keyboard_check(vk_down)) player.pos.add(0, 0, -2);
-        if (keyboard_check(ord("W"))) player.pos.addv(player.fwd.copy().scale(2));
-        if (keyboard_check(ord("S"))) player.pos.addv(player.fwd.copy().neg().scale(2));
+        if (keyboard_check(ord("W"))) player.pos.addv(player.fwd.copy().scale(0.5));
+        if (keyboard_check(ord("S"))) player.pos.addv(player.fwd.copy().neg().scale(0.5));
         if (keyboard_check(ord("A"))) player.fwd.zrotate(-2);
         if (keyboard_check(ord("D"))) player.fwd.zrotate(2);
         if (keyboard_check(vk_escape)) {
@@ -280,7 +310,7 @@ function GS_Dungeon() : Game_State() constructor {
         }
 
         if (!is_undefined(interact_tile) && keyboard_check(ord("E"))) {
-            interact_tile.open = true;
+            interact_tile.open = current_time;
         }
     }
 
@@ -297,7 +327,44 @@ function GS_Dungeon() : Game_State() constructor {
         camera_set_proj_mat(camera, matrix_build_projection_perspective_fov(-60, -WW/WH, 1, 32000));
         camera_apply(camera);
 
-        static render_wall = function (x, y, size, rot) {
+        static render_door = function (x, y, z, size, rot) {
+            matrix_stack_push(matrix_build(x, y, z+2, 0, 0, 0, 1, 1, 1));
+            matrix_stack_push(matrix_build(0, 0, 0, 0, 0, rot, 1, 1, 1));
+            matrix_stack_push(matrix_build(0, 0, 0, 0, 0, 0, size, 1, size));
+            matrix_set(matrix_world, matrix_stack_top());
+            vertex_submit(global.v_door, pr_trianglelist, sprite_get_texture(spr_door, 0));
+            matrix_stack_pop();
+            matrix_stack_pop();
+            matrix_stack_pop();
+
+            var lx = lengthdir_x(1, rot+90);
+            var ly = lengthdir_y(1, rot+90);
+            var lrx = lengthdir_x(1, rot);
+            var lry = lengthdir_y(1, rot);
+
+
+            matrix_stack_push(matrix_build(x+lx*4, y+ly*4, size, 0, 0, 0, 1, 1, 1));
+            matrix_stack_push(matrix_build(0, 0, 0, 0, 0, rot, 1, 1, 1));
+            matrix_stack_push(matrix_build(0, 0, 0, 0, 0, 0, size, 1, size));
+            matrix_set(matrix_world, matrix_stack_top());
+            vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+            matrix_stack_pop();
+            matrix_stack_pop();
+            matrix_stack_pop();
+
+            matrix_stack_push(matrix_build(x-lx*4 + lrx*size, y-ly*4 + lry*size, size, 0, 0, 0, 1, 1, 1));
+            matrix_stack_push(matrix_build(0, 0, 0, 0, 0, rot+180, 1, 1, 1));
+            matrix_stack_push(matrix_build(0, 0, 0, 0, 0, 0, size, 1, size));
+            matrix_set(matrix_world, matrix_stack_top());
+            vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+            matrix_stack_pop();
+            matrix_stack_pop();
+            matrix_stack_pop();
+
+            matrix_set(matrix_world, matrix_stack_top());
+        }
+
+        static render_wall = function (x, y, z, size, rot) {
             matrix_stack_push(matrix_build(x, y, 0, 0, 0, 0, 1, 1, 1));
             matrix_stack_push(matrix_build(0, 0, 0, 0, 0, rot, 1, 1, 1));
             matrix_stack_push(matrix_build(0, 0, 0, 0, 0, 0, size, 1, size));
@@ -325,23 +392,29 @@ function GS_Dungeon() : Game_State() constructor {
 
                 if (t.is_floor()) render_floor(xx*48, yy*48, 48);
 
-                if (t.kind != TILE.WALL) continue;
+                switch (t.kind) {
+                    case TILE.WALL:
+                        if (dungeon.tile_at(xx+1, yy).is_floor())
+                            render_wall((xx+1)*48, yy*48, 0, 48, -90);
 
-                if (dungeon.tile_at(xx+1, yy).is_floor())
-                    render_wall((xx+1)*48, yy*48, 48, -90);
+                        if (dungeon.tile_at(xx-1, yy).is_floor())
+                            render_wall(xx*48, (yy+1)*48, 0, 48, 90);
 
+                        if (dungeon.tile_at(xx, yy+1).is_floor())
+                            render_wall((xx+1)*48, (yy+1)*48, 0, 48, 180);
 
-                if (dungeon.tile_at(xx-1, yy).is_floor())
-                    render_wall(xx*48, (yy+1)*48, 48, 90);
+                        if (dungeon.tile_at(xx, yy-1).is_floor())
+                            render_wall(xx*48, yy*48, 0, 48, 0);
+                    break;
 
-                k = dungeon.tile_kind(xx, yy+1);
-                if (k==TILE.FLOOR || k==TILE.DOOR) {
-                    render_wall((xx+1)*48, (yy+1)*48, 48, 180);
-                }
-
-                k = dungeon.tile_kind(xx, yy-1);
-                if (k==TILE.FLOOR || k==TILE.DOOR) {
-                    render_wall(xx*48, yy*48, 48, 0);
+                    case TILE.DOOR:
+                        var openness = clamp(current_time-t.open, 0, 500)/500;
+                        if (t.open == -1) openness = 0;
+                        if (dungeon.tile_at(xx, yy+1).is_floor())
+                            render_door(xx*48, yy*48+24, openness*48, 48, 0);
+                        else
+                            render_door(xx*48+24, yy*48, openness*48, 48, -90);
+                    break;
                 }
             }
         }

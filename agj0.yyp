@@ -128,6 +128,7 @@
     {"id":{"name":"sh_smf_animate","path":"shaders/sh_smf_animate/sh_smf_animate.yy",},},
     {"id":{"name":"sh_smf_static","path":"shaders/sh_smf_static/sh_smf_static.yy",},},
     {"id":{"name":"spr_arrow","path":"sprites/spr_arrow/spr_arrow.yy",},},
+    {"id":{"name":"spr_door","path":"sprites/spr_door/spr_door.yy",},},
     {"id":{"name":"spr_floor_brick","path":"sprites/spr_floor_brick/spr_floor_brick.yy",},},
     {"id":{"name":"spr_player","path":"sprites/spr_player/spr_player.yy",},},
   ],

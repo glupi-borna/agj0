@@ -120,27 +120,76 @@ vertex_begin(global.v_wall, global.vertex_format);
 
 	vtx_pos(1, 0, 0);
 	vtx_tex(1, 10);
-	vtx_point(global.v_wall); // 1
+	vtx_point(global.v_wall);
 
 	vtx_pos(1, 0, 10);
 	vtx_tex(1, 0);
-	vtx_point(global.v_wall); // 2
+	vtx_point(global.v_wall);
 
 	vtx_pos(0, 0, 10);
 	vtx_tex(0, 0);
-	vtx_point(global.v_wall); // 3
-	vtx_point(global.v_wall); // 4
+	vtx_point(global.v_wall);
+	vtx_point(global.v_wall);
 
 	vtx_pos(0, 0, 0);
 	vtx_tex(0, 10);
-	vtx_point(global.v_wall); // 5
+	vtx_point(global.v_wall);
 
 	vtx_pos(1, 0, 0);
 	vtx_tex(1, 10);
-	vtx_point(global.v_wall); // 6
-
-
+	vtx_point(global.v_wall);
 vertex_end(global.v_wall);
+
+global.v_door = vertex_create_buffer();
+vertex_begin(global.v_door, global.vertex_format);
+	vtx_norm(0, 1, 0);
+	vtx_rgba(#ffffff, 1);
+
+	vtx_pos(1, 0, 0);
+	vtx_tex(1, 1);
+	vtx_point(global.v_door);
+
+	vtx_pos(1, 0, 1);
+	vtx_tex(1, 0);
+	vtx_point(global.v_door);
+
+	vtx_pos(0, 0, 1);
+	vtx_tex(0, 0);
+	vtx_point(global.v_door);
+	vtx_point(global.v_door);
+
+	vtx_pos(0, 0, 0);
+	vtx_tex(0, 1);
+	vtx_point(global.v_door);
+
+	vtx_pos(1, 0, 0);
+	vtx_tex(1, 1);
+	vtx_point(global.v_door);
+
+	vtx_norm(0, -1, 0);
+
+	vtx_pos(1, 0, 0);
+	vtx_tex(1, 1);
+	vtx_point(global.v_door);
+
+	vtx_pos(0, 0, 0);
+	vtx_tex(0, 1);
+	vtx_point(global.v_door);
+
+	vtx_pos(0, 0, 1);
+	vtx_tex(0, 0);
+	vtx_point(global.v_door);
+	vtx_point(global.v_door);
+
+	vtx_pos(1, 0, 1);
+	vtx_tex(1, 0);
+	vtx_point(global.v_door);
+
+	vtx_pos(1, 0, 0);
+	vtx_tex(1, 1);
+	vtx_point(global.v_door);
+vertex_end(global.v_door);
+
 
 /// @param {Function} _fn
 /// @param {Array} _args
@@ -184,8 +233,9 @@ function do_3d() {
 	ensure_pixelation();
     gpu_set_ztestenable(true);
     gpu_set_zwriteenable(true);
+	gpu_set_alphatestenable(true);
 	gpu_set_cullmode(cull_counterclockwise);
-    gpu_set_fog(true, c_black, 0, 300);
+    gpu_set_fog(true, #111111, 0, 300);
 	gpu_set_tex_repeat(true);
 }
 

@@ -7,11 +7,13 @@ enum TILE {
 	DOOR,
 };
 
+randomize();
+
 /// @param {Enum.TILE} kind
 function Tile(kind) constructor {
 	self.kind = kind;
 	self.discovered = false;
-	self.open = false;
+	self.open = -1;
 
 	static color = function() {
 		switch (kind) {
@@ -42,7 +44,7 @@ function Tile(kind) constructor {
 			case TILE.LARGE_CHEST: return new Rect(0.25, 0.25, 0.5, 0.5);
 			case TILE.SMALL_CHEST: return new Rect(0.375, 0.375, 0.25, 0.25);
 			case TILE.WALL: return new Rect(0, 0, 1, 1);
-			case TILE.DOOR: return open ? undefined : new Rect(0, 0, 1, 1);
+			case TILE.DOOR: return open>=0 ? undefined : new Rect(0, 0, 1, 1);
 		}
 		return undefined;
 	}
