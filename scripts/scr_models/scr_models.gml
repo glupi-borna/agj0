@@ -8,7 +8,6 @@ global.loaded_models_arr = [];
 function get_model(name) {
     /// @type {Struct.smf_model|real}
     var mmod = ds_map_find_value(global.loaded_models, name);
-    var mod_is_undef = is_undefined(mmod);
 
     if (is_undefined(mmod)) {
         var path = name + ".smf";

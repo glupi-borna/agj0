@@ -28,15 +28,6 @@ function __assert_impl(condition, msg) {
 	}
 }
 
-/// @template T
-/// @param {Array<T>} arr
-/// @returns {Array<T>}
-function array_dup(arr) {
-	var out = array_create(array_length(arr));
-	array_copy(out, 0, arr, 0, array_length(arr));
-	return out;
-}
-
 global.vowels = ["a", "e", "i", "o", "u"];
 global.letters = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"];
 
@@ -55,8 +46,6 @@ function gen_name() {
 	}
 	return name;
 }
-
-
 
 vertex_format_begin();
 	vertex_format_add_position_3d();
@@ -112,6 +101,33 @@ vertex_begin(global.v_floor, global.vertex_format);
 	vtx_tex(0, 0);
 	vtx_point(global.v_floor);
 vertex_end(global.v_floor);
+
+global.v_floor_battle = vertex_create_buffer();
+vertex_begin(global.v_floor_battle, global.vertex_format);
+	vtx_norm(0, 0, 1);
+	vtx_rgba(#ffffff, 1);
+
+	vtx_pos(0, 0, 0);
+	vtx_tex(0, 0);
+	vtx_point(global.v_floor_battle);
+
+	vtx_pos(1, 0, 0);
+	vtx_tex(30, 0);
+	vtx_point(global.v_floor_battle);
+
+	vtx_pos(1, 1, 0);
+	vtx_tex(30, 30);
+	vtx_point(global.v_floor_battle);
+	vtx_point(global.v_floor_battle);
+
+	vtx_pos(0, 1, 0);
+	vtx_tex(0, 30);
+	vtx_point(global.v_floor_battle);
+
+	vtx_pos(0, 0, 0);
+	vtx_tex(0, 0);
+	vtx_point(global.v_floor_battle);
+vertex_end(global.v_floor_battle);
 
 global.v_wall = vertex_create_buffer();
 vertex_begin(global.v_wall, global.vertex_format);
@@ -229,13 +245,13 @@ function async_done(async_id) {
 	}
 }
 
-function do_3d() {
+function do_3d(fog=300, cull=cull_counterclockwise) {
 	ensure_pixelation();
     gpu_set_ztestenable(true);
     gpu_set_zwriteenable(true);
 	gpu_set_alphatestenable(true);
-	gpu_set_cullmode(cull_counterclockwise);
-    gpu_set_fog(true, #111111, 0, 300);
+	gpu_set_cullmode(cull);
+    gpu_set_fog(fog>0, #111111, 0, fog);
 	gpu_set_tex_repeat(true);
 }
 
@@ -258,4 +274,56 @@ function ensure_pixelation() {
 		surface_resize(application_surface, WW/2, WH/2);
 		display_set_gui_size(WW, WH);
 	}
+}
+
+/// @param {real} x
+/// @param {real} y
+/// @param {real} z
+function mtx_mov(x, y, z) { return matrix_build(x, y, z, 0, 0, 0, 1, 1, 1); }
+/// @param {real} x
+/// @param {real} y
+/// @param {real} z
+function mtx_scl(x, y, z) { return matrix_build(0, 0, 0, 0, 0, 0, x, y, z); }
+/// @param {real} x
+/// @param {real} y
+/// @param {real} z
+function mtx_rot(x, y, z) { return matrix_build(0, 0, 0, x, y, z, 1, 1, 1); }
+
+/// @param {Array<Real>} m1
+/// @param {Array<Real>} m2
+/// @param {Array<Real>} [...]
+function mtx_mul() {
+	var mat = argument[0];
+	for (var i=1; i<argument_count; i++) {
+		mat = matrix_multiply(mat, argument[i]);
+	}
+	return mat;
+}
+
+/// @param {string} model
+/// @param {string} inst_name
+function animation_name(model, inst_name) {
+	var inst = get_anim_inst(model, inst_name);
+	if (is_undefined(inst)) return "";
+	return inst.currAnimName;
+}
+
+/// @param {string} model
+/// @param {string} inst_name
+function animation_is_playing(model, inst_name) {
+	var inst = get_anim_inst(model, inst_name);
+	if (inst == undefined) return inst;
+	return inst.get_animation() != -1;
+}
+
+/// @param {string} model
+/// @param {string} inst_name
+/// @param {string} anim_name
+/// @param {real} spd
+/// @param {real} lerp_spd
+function animation_play(model, inst_name, anim_name, spd, lerp_spd, reset=false) {
+	var inst = get_anim_inst(model, inst_name);
+	if (is_undefined(inst)) return;
+	inst.play(anim_name, spd, lerp_spd, reset);
+	inst.step(1);
 }

@@ -115,10 +115,21 @@ function v3(_x, _y, _z) constructor {
         return new v3(x, y, z);
     }
 
+    /// @param {real} _x
+    /// @param {real} _y
+    /// @param {real} _z
 	static set = function (_x, _y, _z) {
 		x = _x;
 		y = _y;
 		z = _z;
+		return self;
+	}
+
+	/// @param {Struct.v3} v
+	static setv = function (v) {
+		x = v.x;
+		y = v.y;
+		z = v.z;
 		return self;
 	}
 
@@ -192,6 +203,15 @@ function v3(_x, _y, _z) constructor {
 		x *= amt;
 		y *= amt;
 		z *= amt;
+		return self;
+	}
+
+	/// @param {Struct.v3} v
+	/// @param {real} amt
+	static lerpv = function(v, amt) {
+		x = lerp(x, v.x, amt);
+		y = lerp(y, v.y, amt);
+		z = lerp(z, v.z, amt);
 		return self;
 	}
 

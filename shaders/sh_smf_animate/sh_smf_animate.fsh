@@ -4,13 +4,18 @@
 	This does some basic diffuse, specular and rim lighting.
 */////////////////////////////////////////////////////////////////////////
 varying vec2 v_vTexcoord;
-varying vec3 v_eyeVec;
-varying vec3 v_vNormal;
-varying float v_vRim;
+varying vec3 v_vWorldPos;
+varying vec3 v_vCamPos;
 
-void main()
-{
-    gl_FragColor = texture2D(gm_BaseTexture, v_vTexcoord);
+#define gm_FogStart 0.0
+#define gm_RcpFogRange 300.0
+#define gm_FogColour vec4(0.06666, 0.06666, 0.06666, 1.0)
+
+void main() {
+	float dist = length(v_vWorldPos - v_vCamPos);
+	float fogmix = clamp((dist - gm_FogStart) / gm_RcpFogRange, 0.0, 1.0);
+    gl_FragColor = mix(texture2D(gm_BaseTexture, v_vTexcoord), gm_FogColour, fogmix);
+
 	//gl_FragColor.rgb *= max(pow(max(v_vNormal.z, 0.0), 0.1), 0.5);
 
 	//Diffuse shade

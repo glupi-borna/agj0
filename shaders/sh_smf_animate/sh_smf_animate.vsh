@@ -11,9 +11,8 @@ attribute vec4 in_Colour2;                   // (r,g,b,a)
 attribute vec4 in_Colour3;                   // (r,g,b,a)
 
 varying vec2 v_vTexcoord;
-varying vec3 v_eyeVec;
-varying vec3 v_vNormal;
-varying float v_vRim;
+varying vec3 v_vWorldPos;
+varying vec3 v_vCamPos;
 
 ///////////////////////////////
 /////Animation/////////////////
@@ -66,8 +65,7 @@ vec3 anim_transform(vec3 v)
 /////Animation/////////////////
 ///////////////////////////////
 
-void main()
-{
+void main() {
 	/*///////////////////////////////////////////////////////////////////////////////////////////
 	Initialize the animation system, and transform the vertex position and normal
 	/*///////////////////////////////////////////////////////////////////////////////////////////
@@ -78,10 +76,7 @@ void main()
 
     gl_Position = gm_Matrices[MATRIX_WORLD_VIEW_PROJECTION] * objectSpacePos;
 	vec3 tangent = 2. * in_Colour.rgb - 1.; //This is not used for anything in this particular shader
-	vec3 camPos = - (gm_Matrices[MATRIX_VIEW][3] * gm_Matrices[MATRIX_VIEW]).xyz;
-    vec3 vertPos = (gm_Matrices[MATRIX_WORLD] * objectSpacePos).xyz;
-	v_eyeVec = vertPos - camPos;
-	v_vNormal = normalize((gm_Matrices[MATRIX_WORLD] * animNormal).xyz);
-	v_vRim = normalize((gm_Matrices[MATRIX_WORLD_VIEW_PROJECTION] * animNormal).xyz).z;
+    v_vWorldPos = (gm_Matrices[MATRIX_WORLD] * objectSpacePos).xyz;
+	v_vCamPos = - (gm_Matrices[MATRIX_VIEW][3] * gm_Matrices[MATRIX_VIEW]).xyz;
     v_vTexcoord = in_TextureCoord;
 }

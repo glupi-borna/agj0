@@ -42,7 +42,7 @@ function UI() constructor {
     static start_frame = function() {
         if (keyboard_check_pressed(vk_anykey)) {
             input_mode = INPUT_MODE.BUTTONS;
-        } else if (window_mouse_get_delta_x()>5 || window_mouse_get_delta_y()>5 || mouse_check_button_pressed(mb_any)) {
+        } else if (window_mouse_get_delta_x()>1 || window_mouse_get_delta_y()>1 || mouse_check_button_pressed(mb_any)) {
             input_mode = INPUT_MODE.POINTER;
         }
 
@@ -204,7 +204,7 @@ function UI() constructor {
 
         if (is_active) {
             color(#666666);
-        } else if (is_hovered || is_focused) {
+        } else if (is_focused) {
             color(#ffffff);
         } else {
             color(#aaaaaa);
