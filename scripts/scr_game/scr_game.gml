@@ -87,37 +87,6 @@ function update_game_state() {
     global.game_state.update();
 }
 
-/// @param {string} _name
-/// @param {Asset.GMSprite} _sprite
-function Item(_name, _sprite, _amount=1) constructor {
-    Name = _name;
-    Sprite = _sprite;
-    count = _amount;
-}
-
-function Inventory() constructor {
-    /// @type {Id.DsMap<Struct.Item>}
-    items = ds_map_create();
-
-    /// @param {Struct.Item} item
-    static add = function(item) {
-        /// @type {Struct.Item}
-        var existing = ds_map_find_value(items, item.Name);
-        if (!is_undefined(existing)) existing.count += item.count;
-    }
-
-    /// @param {string} item
-    /// @param {real} count
-    static remove = function(item, count) {
-        /// @type {Struct.Item}
-        var existing = ds_map_find_value(items, count);
-        assert(!is_undefined(existing), $"Item {item} does not exist in inventory");
-        assert(existing.count >= count, $"Can not remove more of {item} than exists in inventory (want {count}, have {existing.count})");
-        existing.count -= count;
-        if (existing.count == 0) ds_map_delete(items, item);
-    }
-}
-
 /// @param {Struct.Dungeon} d
 /// @param {real} px
 /// @param {real} py
@@ -182,46 +151,17 @@ function move(d, pos, x, y, radius) {
     return x==0 && y==0;
 }
 
-enum ELEMENT {
-    BLUNT,
-    SHARP,
-    FIRE,
-    WATER,
-    WIND,
-    ICE,
-    ELEC,
-    RAW,
-};
-
-/// @param {real} _lvl,
-/// @param {Array<Enum.ELEMENT>} _weak
-/// @param {Array<Enum.ELEMENT>} _blocks
-/// @param {real} _max_hp,
-/// @param {real} _max_dp,
-/// @param {real} _attack,
-/// @param {real} _defense,
-/// @param {real} _speed,
-/// @param {real} _luck
+/// @param {real} _lvl
+/// @param {real} _max_hp
+/// @param {real} _speed
 function Stats(
     _lvl,
-    _weak,
-    _blocks,
     _max_hp,
-    _max_dp,
-    _attack,
-    _defense,
-    _speed,
-    _luck
+    _speed
 ) constructor {
     lvl = _lvl
-    weak_to = _weak;
-    blocks = _blocks;
     max_hp = _max_hp;
-    max_dp = _max_dp;
-    attack = _attack;
-    defense = _defense;
     speed = _speed;
-    luck = _luck;
 }
 
 /// @param {string} _name
@@ -239,7 +179,7 @@ function Enemy(_name, _model, _tex, _size, _floating, _stats) constructor {
     stats = _stats;
 
     static char = function() {
-        return new Character(stats, model, texture, size, floating);
+        return new Character(name, stats, model, texture, size, floating);
     }
 }
 
@@ -247,17 +187,7 @@ function Enemy(_name, _model, _tex, _size, _floating, _stats) constructor {
 function mouth(lvl) {
     return new Enemy(
         "Mouth", "mouth", spr_mouth, 12, true,
-        new Stats(
-            lvl,
-            [ELEMENT.SHARP, ELEMENT.WIND],
-            [ELEMENT.ELEC],
-            50 + lvl*5,
-            10 + lvl*1,
-            3+floor(lvl*0.25),
-            2+floor(lvl*0.25),
-            1+floor(lvl*0.25),
-            1+floor(lvl*0.1)
-        )
+        new Stats(lvl, 50+lvl*5, 10+lvl*1)
     );
 }
 
@@ -298,6 +228,10 @@ function Dungeon_Enemy(_data) constructor {
         switch (state) {
             case DE_STATE.ATTACK:
                 if (current_time - state_time > wait_time) {
+                    after(500, function(e, gs) {
+                        array_delete(gs.enemies, array_get_index(gs.enemies, e), 1);
+                    }, [self, global.game_state]);
+
                     set_game_state(
                         new GS_Battle(global.game_state, [data.char()], INITIATIVE.ENEMY)
                     );
@@ -548,21 +482,20 @@ function GS_Dungeon() : Game_State() constructor {
 
     party = [
         new Character(
-            new Stats(1, [], [], 100, 0, 1, 1, 1, 1),
+            "Green",
+            new Stats(1, 100, 3),
             "char", spr_player, 12, false
         ),
         new Character(
-            new Stats(1, [], [], 100, 0, 1, 1, 1, 1),
+            "Suit",
+            new Stats(1, 100, 3),
             "char", spr_player, 12, false
         ),
         new Character(
-            new Stats(1, [], [], 100, 0, 1, 1, 1, 1),
+            "Glasses",
+            new Stats(1, 100, 3),
             "char", spr_player, 12, false
-        ),
-        new Character(
-            new Stats(1, [], [], 100, 0, 1, 1, 1, 1),
-            "char", spr_player, 12, false
-        ),
+        )
     ];
 
     /// @type {Array<Struct.Dungeon_Enemy>}
@@ -647,7 +580,7 @@ function GS_Dungeon() : Game_State() constructor {
         if (exitting()) return;
 
         if (keyboard_check_pressed(vk_f2)) {
-            set_game_state(new GS_Battle(self, [mouth(1).char(), mouth(1).char(), mouth(1).char(), mouth(1).char()], INITIATIVE.ENEMY))
+            set_game_state(new GS_Battle(self, [mouth(1).char(), mouth(1).char(), mouth(1).char()], INITIATIVE.PARTY))
         }
 
         player.update(dungeon);
@@ -697,7 +630,7 @@ function GS_Dungeon() : Game_State() constructor {
         }
 
         if (!is_undefined(interact_tile) && keyboard_check_pressed(ord("E"))) {
-            interact_tile.interact();
+            interact_tile.interact(inventory);
         }
     }
 
@@ -825,7 +758,7 @@ function show_notif(text) {
         new GS_Dungeon_Dialog(
             global.game_state, new Dialog(
                 DIALOG.NOTIF,
-                "", "Opened a chest!", "", ""
+                "", text, "", ""
             )
         ),
         true, false

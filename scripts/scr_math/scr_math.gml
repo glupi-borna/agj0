@@ -133,6 +133,12 @@ function v3(_x, _y, _z) constructor {
 		return self;
 	}
 
+	/// @param {real} _z
+	static setz = function (_z) {
+		z = _z;
+		return self;
+	}
+
     /// @param {real} _x
     /// @param {real} _y
     /// @param {real} _z

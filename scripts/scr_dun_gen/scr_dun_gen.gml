@@ -127,18 +127,25 @@ function Tile(kind) constructor {
 		return "";
 	}
 
-	static interact = function() {
+	/// @param {Struct.Inventory} inv
+	static interact = function(inv) {
 		switch (kind) {
 			case TILE.LARGE_CHEST:
 				open = current_time;
+				var i = random_item();
+				var amt = irandom_range(3, 10);
 				animation_play("chest", "chest_opening", "opening", 0.03, 1, true);
-				show_notif("Opened a chest!");
+				inv.add(i, amt);
+				show_notif($"Got {i.name} x{amt}!");
 				return;
 
 			case TILE.SMALL_CHEST:
 				open = current_time;
+				var i = random_item();
+				var amt = irandom_range(1, 5);
 				animation_play("chest", "chest_opening", "opening", 0.03, 1, true);
-				show_notif("Opened a chest!");
+				inv.add(i, amt);
+				show_notif($"Got {i.name} x{amt}!");
 				return;
 
 			case TILE.DOOR:

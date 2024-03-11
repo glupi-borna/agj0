@@ -327,3 +327,43 @@ function animation_play(model, inst_name, anim_name, spd, lerp_spd, reset=false)
 	inst.play(anim_name, spd, lerp_spd, reset);
 	inst.step(1);
 }
+
+/// @param {Function} _fn
+/// @param {real} _time
+function _ExecAfter(_fn, _args, _time) constructor {
+	fn = _fn;
+	args = _args;
+	time = _time;
+}
+
+/// @type {Array<Struct._ExecAfter>}
+global.exec_queue = [];
+
+/// @param {real} time
+/// @param {Function} fn
+/// @param {Array} args
+function after(time, fn, args) {
+	array_push(global.exec_queue, new _ExecAfter(fn, args, current_time+time));
+}
+
+function drain_exec_queue() {
+	for (var i=array_length(global.exec_queue)-1; i>=0; i--) {
+		var it = global.exec_queue[i];
+		if (current_time > it.time) {
+			script_execute_ext(it.fn, it.args);
+			array_delete(global.exec_queue, i, 1);
+		}
+	}
+}
+
+function array_flatten(arr, into=[]) {
+	for (var i=0; i<array_length(arr); i++) {
+		var item = arr[i];
+		if (is_array(item)) {
+			array_flatten(item, into);
+		} else {
+			array_push(into, item);
+		}
+	}
+	return into;
+}

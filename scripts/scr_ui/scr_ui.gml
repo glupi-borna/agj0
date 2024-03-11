@@ -29,13 +29,8 @@ function UI() constructor {
     active = "-";
     focused = "-";
     last = "-";
+    saw_focused = false;
     focus_changed = false;
-    focus = {
-        left: "-",
-        right: "-",
-        up: "-",
-        down: "-"
-    };
 
     input_mode = INPUT_MODE.BUTTONS;
 
@@ -46,57 +41,35 @@ function UI() constructor {
             input_mode = INPUT_MODE.POINTER;
         }
 
+        saw_focused = false;
         cursor.x = 0;
         cursor.y = 0;
         container = start_col();
         focus_changed = false;
-        focus = {
-            left: "-",
-            right: "-",
-            up: "-",
-            down: "-"
-        };
     }
 
     static end_frame = function() {
+        if (!saw_focused) focused = "-";
         if (mouse_check_button_released(mb_left)) active = "-";
     }
-
-    /// @param {string} left
-    /// @param {string} right
-    /// @param {string} up
-    /// @param {string} down
-    static focus_targets = function (left, right, up, down) {
-        focus.left = left;
-        focus.right = right;
-        focus.up = up;
-        focus.down = down;
-    }
-
-    static focus_ud = function(up, down) { focus.up = up; focus.down = down; }
-    static focus_lr = function(left, right) { focus.left = left; focus.right = right; }
-
-    static focus_left = function(name) { focus.left = name; }
-    static focus_down = function(name) { focus.down = name; }
-    static focus_right = function(name) { focus.right = name; }
-    static focus_up = function(name) { focus.up = name; }
 
     static set_focus = function(name) {
         if (focus_changed) return;
         if (focused == name) return;
         focus_changed = true;
         focused = name;
+        saw_focused = true;
     }
 
     static kbd_focus_interaction = function (id) {
+        if (focused == id) saw_focused = true;
+        var old_last = last;
         last = id;
+        if (keyboard_check_pressed(vk_down) && focused == old_last) set_focus(id);
         if (input_mode != INPUT_MODE.BUTTONS) return;
         if (focused == "-") set_focus(id);
         if (focused != id) return;
-        if (keyboard_check_pressed(vk_left) && focus.left != "-") set_focus(focus.left);
-        if (keyboard_check_pressed(vk_right) && focus.right != "-") set_focus(focus.right);
-        if (keyboard_check_pressed(vk_down) && focus.down != "-") set_focus(focus.down);
-        if (keyboard_check_pressed(vk_up) && focus.up != "-") set_focus(focus.up);
+        if (keyboard_check_pressed(vk_up)) set_focus(old_last);
     }
 
     static get_rect = function (w, h) {

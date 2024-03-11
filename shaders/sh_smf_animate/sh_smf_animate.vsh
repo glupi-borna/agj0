@@ -13,6 +13,7 @@ attribute vec4 in_Colour3;                   // (r,g,b,a)
 varying vec2 v_vTexcoord;
 varying vec3 v_vWorldPos;
 varying vec3 v_vCamPos;
+varying vec3 v_vNormal;
 
 ///////////////////////////////
 /////Animation/////////////////
@@ -76,6 +77,7 @@ void main() {
 
     gl_Position = gm_Matrices[MATRIX_WORLD_VIEW_PROJECTION] * objectSpacePos;
 	vec3 tangent = 2. * in_Colour.rgb - 1.; //This is not used for anything in this particular shader
+	v_vNormal = normalize((gm_Matrices[MATRIX_WORLD] * animNormal).xyz);
     v_vWorldPos = (gm_Matrices[MATRIX_WORLD] * objectSpacePos).xyz;
 	v_vCamPos = - (gm_Matrices[MATRIX_VIEW][3] * gm_Matrices[MATRIX_VIEW]).xyz;
     v_vTexcoord = in_TextureCoord;
