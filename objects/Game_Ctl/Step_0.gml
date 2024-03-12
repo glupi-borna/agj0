@@ -1,3 +1,4 @@
+button_prompts_step();
 drain_exec_queue();
 update_game_state();
 

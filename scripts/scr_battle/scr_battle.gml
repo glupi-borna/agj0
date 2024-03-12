@@ -146,6 +146,7 @@ function GS_Battle(
 ) : Game_State() constructor {
     gs = _gs;
     party = gs.party;
+    /// @type {Array<Struct.Character>}
     enemies = _enemies;
     initiative = _initiative;
     /// @type {Array<Struct.Character>}
@@ -220,6 +221,11 @@ function GS_Battle(
     }
 
     static init = function () {
+        if (audio_is_playing(mus_s2)) {
+            audio_sound_gain(mus_s2, 0, 100);
+            audio_stop_sound(mus_s2);
+        }
+
         audio_play_sound(mus_s1, 1, true);
         audio_sound_gain(mus_s1, 0, 0);
         audio_sound_gain(mus_s1, 1, 100);
@@ -275,6 +281,11 @@ function GS_Battle(
 
     static stop_music = function() {
         audio_sound_gain(mus_s1, 0, 500);
+
+        audio_play_sound(mus_s2, 1, true);
+        audio_sound_gain(mus_s2, 0, 0);
+        audio_sound_gain(mus_s2, 1, 500);
+
         after(500, function() {
             audio_sound_set_track_position(mus_s1, 0);
             audio_stop_sound(mus_s1);
@@ -305,17 +316,18 @@ function GS_Battle(
 
             if (array_all(party, function(e) {return e.hp==0})) {
                 stop_music();
+                gs.level_transition()
                 set_game_state(new GS_Main_Menu());
             }
 
-            for (var i=0; i<array_length(turn_order); i++) {
-                if (keyboard_check_pressed(ord(string(i+1)))) {
-                    current_turn = i;
-                    var ct = battle_turn_cam_target(self);
-                    cam_target_pos = ct[0];
-                    cam_target_fwd = ct[1];
-                }
-            }
+            // for (var i=0; i<array_length(turn_order); i++) {
+            //     if (keyboard_check_pressed(ord(string(i+1)))) {
+            //         current_turn = i;
+            //         var ct = battle_turn_cam_target(self);
+            //         cam_target_pos = ct[0];
+            //         cam_target_fwd = ct[1];
+            //     }
+            // }
         }
 
         if (state == BATTLE_STATE.ANIMATION) {
@@ -461,6 +473,9 @@ function GS_Battle(
                 if (!is_party_turn()) return;
                 ui.start_frame();
 
+                bp_register("Arrows, WASD", "Change selection");
+                bp_register("Enter", "Confirm");
+
                 ui.cursor.set(WW/4-100, WH/2);
 
                 if (menu == BATTLE_MENU.MAIN) {
@@ -603,7 +618,7 @@ function GS_Battle(
             mtx_scl(30*TILE_SIZE, 30*TILE_SIZE, 1),
             mtx_mov(-15*TILE_SIZE, -15*TILE_SIZE, 0),
         ));
-        vertex_submit(global.v_floor_battle, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+        vertex_submit(global.v_floor_battle, pr_trianglelist, sprite_get_texture(get_floor_tex(), 0));
 
         for (var i=0; i<array_length(turn_order); i++) {
             var char = turn_order[i];

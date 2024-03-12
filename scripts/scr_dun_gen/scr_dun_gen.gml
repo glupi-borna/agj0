@@ -7,9 +7,58 @@ enum TILE {
 	LARGE_CHEST,
 	SMALL_CHEST,
 	DOOR,
+	STAIRS,
+	STAIRS_CHILD,
+	WELL,
 };
 
 randomize();
+print("SEED", random_get_seed());
+print("SEED", random_get_seed());
+print("SEED", random_get_seed());
+print("SEED", random_get_seed());
+print("SEED", random_get_seed());
+print("SEED", random_get_seed());
+print("SEED", random_get_seed());
+
+function get_current_level() {
+	if (is_instanceof(global.game_state, GS_Dungeon)) {
+		/// @type {Struct.GS_Dungeon}
+		var gs = global.game_state;
+		return gs.lvl;
+
+	} else if (is_instanceof(global.game_state, GS_Dungeon_Dialog)) {
+		/// @type {Struct.GS_Dungeon_Dialog}
+		var gs = global.game_state;
+		return gs.root_gs.lvl;
+
+	} else if (is_instanceof(global.game_state, GS_Level_Transition)) {
+		/// @type {Struct.GS_Level_Transition}
+		var gs = global.game_state;
+		return gs.gs.lvl;
+
+	} else if (is_instanceof(global.game_state, GS_Battle)) {
+		/// @type {Struct.GS_Battle}
+		var gs = global.game_state;
+		return gs.gs.lvl;
+	}
+
+	return -1;
+}
+
+function get_floor_tex() {
+	var lvl = get_current_level();
+	if (lvl < 5) return spr_concrete;
+	if (lvl < 10) return spr_brick;
+	return spr_brick;
+}
+
+function get_door_tex() {
+	var lvl = get_current_level();
+	if (lvl < 5) return spr_slidingdoor;
+	if (lvl < 10) return spr_bars;
+	return spr_bars;
+}
 
 /// @param {real} x
 /// @param {real} y
@@ -18,7 +67,7 @@ function render_floor(x, y, z=0) {
 		mtx_scl(TILE_SIZE, TILE_SIZE, 1),
 		mtx_mov(x*TILE_SIZE, y*TILE_SIZE, z*TILE_SIZE),
 	));
-	vertex_submit(global.v_floor, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+	vertex_submit(global.v_floor, pr_trianglelist, sprite_get_texture(get_floor_tex(), 0));
 }
 
 /// @param {real} x
@@ -31,7 +80,7 @@ function render_wall(x, y, z, rot) {
 		mtx_rot(0, 0, rot),
 		mtx_mov(x*TILE_SIZE, y*TILE_SIZE, z*TILE_SIZE),
 	));
-	vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+	vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(get_floor_tex(), 0));
 }
 
 /// @param {real} x
@@ -44,7 +93,7 @@ function render_door(x, y, z, rot) {
 		mtx_rot(0, 0, rot),
 		mtx_mov(x*TILE_SIZE, y*TILE_SIZE, z*TILE_SIZE+2)
 	));
-	vertex_submit(global.v_door, pr_trianglelist, sprite_get_texture(spr_door, 0));
+	vertex_submit(global.v_door, pr_trianglelist, sprite_get_texture(get_door_tex(), 0));
 
 	var lx = lengthdir_x(1, rot+90);
 	var ly = lengthdir_y(1, rot+90);
@@ -56,14 +105,14 @@ function render_door(x, y, z, rot) {
 		mtx_rot(0, 0, rot),
 		mtx_mov(x*TILE_SIZE+lx*4, y*TILE_SIZE+ly*4, TILE_SIZE)
 	));
-	vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+	vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(get_floor_tex(), 0));
 
 	matrix_set(matrix_world, mtx_mul(
 		mtx_scl(TILE_SIZE, 1, TILE_SIZE),
 		mtx_rot(0, 0, rot+180),
 		mtx_mov(x*TILE_SIZE-lx*4 + lrx*TILE_SIZE, y*TILE_SIZE-ly*4 + lry*TILE_SIZE, TILE_SIZE)
 	));
-	vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(spr_floor_brick, 0));
+	vertex_submit(global.v_wall, pr_trianglelist, sprite_get_texture(get_floor_tex(), 0));
 }
 
 function render_chest(x, y, z, scale, open) {
@@ -88,11 +137,58 @@ function render_chest(x, y, z, scale, open) {
 	shader_reset();
 }
 
+function render_well(x, y, z, empty) {
+	var rot = sin(x*1000)*360+sin(y*1000)*360;
+	matrix_set(matrix_world, mtx_mul(
+		mtx_scl(TILE_SIZE*1, TILE_SIZE*1, TILE_SIZE*0.5),
+		mtx_rot(0, 0, rot),
+		mtx_mov((x+0.5)*TILE_SIZE, (y+0.5)*TILE_SIZE, 0),
+	));
+	shader_set(sh_smf_animate);
+	if (!empty) {
+		animation_play("well", "well", "full", 0.01, 1, false);
+		render_model_simple("well", "well", spr_well);
+	} else {
+		animation_play("well", "well", "empty", 1, 1, true);
+		render_model_simple("well", "well", spr_well);
+	}
+	shader_reset();
+}
+
+function render_stairs(x, y, rot, dir) {
+	var lx = 0;
+	var ly = 0;
+	switch (rot) {
+		case 0: ly = 1; break;
+		case 90: ly = 2; lx = 1; break;
+		case 180: lx = -2; break;
+		case -90:
+		case 270: lx = 0; break;
+	}
+
+	matrix_set(matrix_world, mtx_mul(
+		mtx_scl(TILE_SIZE, TILE_SIZE, TILE_SIZE),
+		mtx_rot(0, 0, rot),
+		mtx_mov((x+lx)*TILE_SIZE, (y+ly)*TILE_SIZE, 0),
+	));
+
+	shader_set(sh_smf_animate);
+	if (dir == -1) {
+		render_model_simple("stairs", "stairs", get_floor_tex());
+	} else {
+		render_model_simple("stairs-down", "stairs", get_floor_tex());
+	}
+	shader_reset();
+}
+
 /// @param {Enum.TILE} kind
 function Tile(kind) constructor {
 	self.kind = kind;
 	self.discovered = false;
 	self.open = -1;
+	self.direction = 1;
+	/// Used only for stairs
+	self.rotation = 0;
 
 	static color = function() {
 		switch (kind) {
@@ -101,12 +197,16 @@ function Tile(kind) constructor {
 			case TILE.LARGE_CHEST: return #ffff99;
 			case TILE.SMALL_CHEST: return #ffff99;
 			case TILE.DOOR: return #338855;
+			case TILE.WELL: return #ff5555;
+			case TILE.STAIRS:
+			case TILE.STAIRS_CHILD:
+				return #99aaff;
 		}
 		return #ff00ff;
 	}
 
 	static is_floor = function() {
-		return kind != TILE.WALL && kind != TILE.EMPTY;
+		return kind != TILE.WALL && kind != TILE.EMPTY && kind != TILE.STAIRS && kind != TILE.STAIRS_CHILD;
 	}
 
 	static interactive = function() {
@@ -114,28 +214,49 @@ function Tile(kind) constructor {
 			case TILE.LARGE_CHEST: return open == -1;
 			case TILE.SMALL_CHEST: return open == -1;
 			case TILE.DOOR: return open == -1;
+
+			case TILE.STAIRS:
+			case TILE.STAIRS_CHILD:
+				return true;
+
+			case TILE.WELL:
+				return true;
 		}
 		return false;
 	}
+
+	static interacted_with_well = false;
 
 	static interact_label = function() {
 		switch (kind) {
 			case TILE.LARGE_CHEST: return "Open chest";
 			case TILE.SMALL_CHEST: return "Open chest";
 			case TILE.DOOR: return "Open door";
+			case TILE.STAIRS:
+			case TILE.STAIRS_CHILD:
+				if (direction == 1) { return "Go down"; }
+				else { return "Go up"; }
+
+			case TILE.WELL:
+				if (interacted_with_well) {
+					if (open != -1) return "Check well";
+					else return "Drink from well";
+				} else {
+					return "Investigate";
+				}
 		}
 		return "";
 	}
 
-	/// @param {Struct.Inventory} inv
-	static interact = function(inv) {
+	/// @param {Struct.GS_Dungeon} d
+	static interact = function(d) {
 		switch (kind) {
 			case TILE.LARGE_CHEST:
 				open = current_time;
 				var i = random_item();
 				var amt = irandom_range(3, 10);
 				animation_play("chest", "chest_opening", "opening", 0.03, 1, true);
-				inv.add(i, amt);
+				d.inventory.add(i, amt);
 				show_notif($"Got {i.name} x{amt}!");
 				return;
 
@@ -144,12 +265,45 @@ function Tile(kind) constructor {
 				var i = random_item();
 				var amt = irandom_range(1, 5);
 				animation_play("chest", "chest_opening", "opening", 0.03, 1, true);
-				inv.add(i, amt);
+				d.inventory.add(i, amt);
 				show_notif($"Got {i.name} x{amt}!");
 				return;
 
 			case TILE.DOOR:
 				open = current_time;
+				return;
+
+			case TILE.STAIRS:
+			case TILE.STAIRS_CHILD:
+				var next_lvl = d.lvl + direction;
+				if (next_lvl == 0) {
+					show_notif("Leaving is not an option. We must descend.");
+				} else {
+					d.level_transition(next_lvl);
+				}
+				return;
+
+			case TILE.WELL:
+				if (interacted_with_well) {
+					if (open != -1) {
+						show_notif("There is no water in the well.");
+					} else {
+						open = current_time;
+						for (var i=0; i<array_length(d.party); i++) {
+							var m = d.party[i];
+							m.hp = m.stats.max_hp;
+						}
+						show_notif("We drank a lot of water.");
+						when(
+							function() { return is_instanceof(global.game_state, GS_Dungeon); }, [],
+							show_notif, ["Somehow, we feel much better"]
+						);
+					}
+				} else {
+					interacted_with_well = true;
+					show_notif("The water in this well faintly smells like medicine.");
+				}
+
 				return;
 		}
 	}
@@ -158,8 +312,13 @@ function Tile(kind) constructor {
 		switch (kind) {
 			case TILE.LARGE_CHEST: return new Rect(0.25, 0.25, 0.5, 0.5);
 			case TILE.SMALL_CHEST: return new Rect(0.375, 0.375, 0.25, 0.25);
-			case TILE.WALL: return new Rect(0, 0, 1, 1);
 			case TILE.DOOR: return open>=0 ? undefined : new Rect(0, 0, 1, 1);
+
+			case TILE.WALL:
+			case TILE.WELL:
+			case TILE.STAIRS:
+			case TILE.STAIRS_CHILD:
+				return new Rect(0, 0, 1, 1);
 		}
 		return undefined;
 	}
@@ -201,6 +360,29 @@ function Room(_x, _y, _w, _h) : Rect(_x, _y, _w, _h) constructor {
 				}
 			}
 		}
+	}
+
+	/// @param {Struct.Dungeon} d
+	/// @param {Enum.TILE} kind
+	/// @returns {Struct.v2 | Undefined}
+	static find_tile_of_kind = function(d, kind) {
+		/// @type {Array<Struct.v2>}
+		var all_tiles = [];
+		for (var xx=0; xx<w; xx++) {
+			for (var yy=0; yy<h; yy++) {
+				if (d.tile_at(x+xx, y+yy).kind == kind) array_push(all_tiles, new v2(xx+x, yy+y));
+			}
+		}
+		if (array_length(all_tiles) == 0) return undefined;
+		return pick_arr(all_tiles);
+	}
+
+	/// @param {Enum.TILE} kind
+	static has_tile_of_kind = function(kind) {
+		for (var i=0; i<array_length(tiles); i++) {
+			if (tiles[i].kind == kind) return true;
+		}
+		return false;
 	}
 
 	/// @param {Struct.Room} r
@@ -351,6 +533,10 @@ function Island(r) constructor {
 	}
 }
 
+/// @param {real} lvl
+/// @returns {Struct.Enemy}
+function enemy_fn_template(lvl){}
+
 /// @param {real} _w
 /// @param {real} _h
 function Dungeon(_w, _h) constructor {
@@ -479,7 +665,7 @@ function Dungeon(_w, _h) constructor {
 	/// @param {real} h
 	/// @returns {Struct.Room | Undefined}
 	static get_room = function(x, y, w, h) {
-		if (x>0 && y> 0 && x+w < self.width && y+h < self.height) {
+		if (x>0 && y>0 && x+w < self.width && y+h < self.height) {
 			if (!room_overlaps_rect(x, y, w, h)) return new Room(x, y, w, h);
 		}
 
@@ -499,12 +685,6 @@ function Dungeon(_w, _h) constructor {
 		/// @type {Array<Struct.Room>}
 		rooms = [];
 		tiles = array_create(width*height, global.NULL_TILE);
-	}
-
-	static fill_rooms = function() {
-		for (var i=0; i<array_length(rooms); i++) {
-			rooms[i].fill(self);
-		}
 	}
 
     static find_islands = function() {
@@ -616,9 +796,87 @@ function Dungeon(_w, _h) constructor {
 		return undefined;
 	}
 
-	static generate = function() {
-        var t0 = get_timer();
+	/// @param {real} x
+	/// @param {real} y
+	static get_furthest_room = function(x, y) {
+		/// @type {Struct.Room}
+		var furthest_room = undefined;
+		var dist = 0;
+		for (var i=0; i<array_length(rooms); i++) {
+			var r = rooms[i];
+			var rdist = point_distance(r.xmid(), r.ymid(), x, y);
+			if (rdist > dist) {
+				dist = rdist;
+				furthest_room = r;
+			}
+		}
+		return furthest_room;
+	}
 
+	/// Returns a v3 if it managed to find a valid position for stairs,
+	/// or undefined if it did not.
+	/// The returned v3 contains the x,y positions of the stairs in dungeon
+	/// coordinates, and stores the rotation of the stairs in the z coordinate.
+	/// @param {Struct.Room} r
+	/// @returns {Struct.v3|Undefined}
+	static get_stairs_pos = function(r) {
+		var found = true;
+		var xx = 0;
+		var yy = 0;
+
+		found = true;
+		xx = r.x-1;
+		yy = floor(r.ymid());
+		if (tile_at(xx, yy).kind == TILE.WALL && tile_at(xx, yy+1).kind == TILE.WALL) {
+			for (var i=1; i<10; i++) {
+				if (tile_at(xx-i, yy).kind != TILE.EMPTY) { found = false; break; }
+				if (tile_at(xx-i, yy+1).kind != TILE.EMPTY) { found = false; break; }
+			}
+			if (found) return new v3(xx, yy, 180);
+		}
+
+		found = true;
+		xx = r.x+r.w;
+		yy = floor(r.ymid());
+		if (tile_at(xx, yy).kind == TILE.WALL && tile_at(xx, yy+1).kind == TILE.WALL) {
+			for (var i=1; i<10; i++) {
+				if (tile_at(xx+i, yy).kind != TILE.EMPTY) { found = false; break; }
+				if (tile_at(xx+i, yy+1).kind != TILE.EMPTY) { found = false; break; }
+			}
+			if (found) return new v3(xx, yy, 0);
+		}
+
+
+		found = true;
+		xx = floor(r.xmid());
+		yy = r.y-1;
+		if (tile_at(xx, yy).kind == TILE.WALL && tile_at(xx+1, yy).kind == TILE.WALL) {
+			for (var i=1; i<10; i++) {
+				if (tile_at(xx, yy-i).kind != TILE.EMPTY) { found = false; break; }
+				if (tile_at(xx+1, yy-i).kind != TILE.EMPTY) { found = false; break; }
+			}
+			if (found) return new v3(xx, yy, 90);
+		}
+
+		found = true;
+		xx = floor(r.xmid());
+		yy = r.y+r.h;
+		if (tile_at(xx, yy).kind == TILE.WALL && tile_at(xx+1, yy).kind == TILE.WALL) {
+			for (var i=1; i<10; i++) {
+				if (tile_at(xx, yy+i).kind != TILE.EMPTY) { found = false; break; }
+				if (tile_at(xx+1, yy+i).kind != TILE.EMPTY) { found = false; break; }
+			}
+			if (found) return new v3(xx, yy, 270);
+		}
+
+		return undefined;
+	}
+
+	/// @param {real} lvl
+	/// @param {Array<Function.enemy_fn_template>} enemy_pool
+	/// @param {Struct.GS_Dungeon} gs
+	/// @returns {bool}
+	static generate = function(lvl, enemy_pool, gs) {
 		var dim = min(width, height);
 		var attempts = 0;
 		while (array_length(rooms)<2 || attempts<20) {
@@ -629,9 +887,9 @@ function Dungeon(_w, _h) constructor {
 			}
 		}
 
-        var t1 = get_timer();
-		fill_rooms();
-        var t2 = get_timer();
+		for (var i=0; i<array_length(rooms); i++) {
+			rooms[i].fill(self);
+		}
 
 		for (var i=0; i<array_length(rooms); i++) {
 			var r = rooms[i];
@@ -651,7 +909,6 @@ function Dungeon(_w, _h) constructor {
 
 			if (!is_undefined(closest)) r.connect(closest);
 		}
-        var t3 = get_timer();
 
 		islands = find_islands();
 		while (array_length(islands) > 1) {
@@ -665,7 +922,6 @@ function Dungeon(_w, _h) constructor {
 			pair[0].connect_island(room_pair[0], room_pair[1], pair[1]);
 			array_delete(islands, p2i, 1);
 		}
-        var t4 = get_timer();
 
         for (var i=0; i<array_length(islands[0].rooms); i++) {
             var r = islands[0].rooms[i];
@@ -678,7 +934,6 @@ function Dungeon(_w, _h) constructor {
 				r.hallways[j].fill(self);
 			}
         }
-        var t5 = get_timer();
 
 		for (var xx=0; xx<width; xx++) {
 			for (var yy=0; yy<height; yy++) {
@@ -688,15 +943,86 @@ function Dungeon(_w, _h) constructor {
 			}
 		}
 
-		var t6 = get_timer();
+		var lr = get_leaf_room();
+		var pr = get_furthest_room(lr.xmid(), lr.ymid());
+		tile(floor(pr.xmid()), floor(pr.ymid()), TILE.FLOOR);
 
-        print($"Create rooms      {t1-t0}us");
-        print($"Fill rooms        {t2-t1}us");
-        print($"Connect closest   {t3-t2}us");
-        print($"Find/conn islands {t4-t3}us");
-        print($"Hallways          {t5-t4}us");
-        print($"Walls             {t6-t5}us");
-        print($"Total             {t6-t0}us");
+		var ok = true;
+		var upstairs_pos = get_stairs_pos(pr);
+		if (!is_undefined(upstairs_pos)) {
+			var t = pr.tile(self, upstairs_pos.x, upstairs_pos.y, TILE.STAIRS);
+			t.direction = -1;
+			t.rotation = upstairs_pos.z;
+
+			var dx = 0;
+			var dy = 0;
+
+			switch (upstairs_pos.z) {
+				case 0: dx = -1; break;
+				case 90: dy = 1; break;
+				case 180: dx = 1; break;
+				case 270: dy = -1; break;
+			}
+
+			var cx = upstairs_pos.z%180 == 90 ? 1 : 0;
+			var cy = upstairs_pos.z%180 == 90 ? 0 : 1;
+
+			t = pr.tile(self, upstairs_pos.x+cx, upstairs_pos.y+cy, TILE.STAIRS_CHILD);
+			t.direction = -1;
+			t.rotation = upstairs_pos.z;
+
+			gs.player.pos.setv(upstairs_pos).setz(0).add(dx+0.5, dy+0.5, 0).scale(TILE_SIZE);
+			var px = floor(gs.player.pos.x / TILE_SIZE);
+			var py = floor(gs.player.pos.y / TILE_SIZE);
+			pr.tile(self, px, py, TILE.FLOOR);
+			gs.player.fwd.set(dx, dy, 0).normalize();
+
+		} else ok = false;
+
+		var er = get_furthest_room(pr.xmid(), pr.ymid());
+		var downstairs_pos = get_stairs_pos(er);
+		if (!is_undefined(downstairs_pos)) {
+			var t = er.tile(self, downstairs_pos.x, downstairs_pos.y, TILE.STAIRS);
+			t.direction = 1;
+			t.rotation = downstairs_pos.z;
+
+			var cx = downstairs_pos.z%180 == 90 ? 1 : 0;
+			var cy = downstairs_pos.z%180 == 90 ? 0 : 1;
+
+			t = er.tile(self, downstairs_pos.x+cx, downstairs_pos.y+cy, TILE.STAIRS_CHILD);
+			t.direction = 1;
+			t.rotation = downstairs_pos.z;
+
+		} else ok = false;
+
+		var well = undefined;
+		while (is_undefined(well)) {
+			var wr = pick_arr(rooms);
+			if (wr == pr) continue;
+			if (wr.has_tile_of_kind(TILE.STAIRS)) continue;
+			var wt = wr.find_tile_of_kind(self, TILE.FLOOR);
+			if (is_undefined(wt)) continue;
+			well = wr.tile(self, wt.x, wt.y, TILE.WELL);
+		}
+
+		array_resize(gs.enemies, 0);
+		for (var i=0; i<10; i++) {
+			var r = pick_arr(rooms);
+			if (r == pr) continue;
+
+			var p = r.find_tile_of_kind(self, TILE.FLOOR);
+			if (is_undefined(p)) continue;
+
+			/// @type {Function.enemy_fn_template}
+			var make_enemy = pick_arr(enemy_pool);
+			var e = new Dungeon_Enemy(make_enemy(lvl));
+
+			e.pos.set(p.x+0.5, p.y+0.5, 0).scale(TILE_SIZE);
+
+			array_push(gs.enemies, e);
+		}
+
+		return ok;
 	}
 
 	/// @type {Array<Struct.Island>}
@@ -712,22 +1038,22 @@ function Dungeon(_w, _h) constructor {
 				if (!tile.discovered && !debug_display) continue;
 				draw_set_color(tile.color());
 				draw_rectangle(xoff+xx*tile_size, yoff+yy*tile_size, xoff+xx*tile_size+tile_size-1, yoff+yy*tile_size+tile_size-1, false);
-				if (!tiles[xx-1+yy*width].is_floor()) {
+				if (!tile_at(xx-1, yy).is_floor()) {
 					draw_set_color(c_white);
 					draw_line(xoff+xx*tile_size, yoff+yy*tile_size, xoff+xx*tile_size, yoff+(yy+1)*tile_size);
 				}
 
-				if (!tiles[xx+1+yy*width].is_floor()) {
+				if (!tile_at(xx+1, yy).is_floor()) {
 					draw_set_color(c_white);
 					draw_line(xoff+(xx+1)*tile_size, yoff+yy*tile_size, xoff+(xx+1)*tile_size, yoff+(yy+1)*tile_size);
 				}
 
-				if (!tiles[xx+(yy-1)*width].is_floor()) {
+				if (!tile_at(xx, yy-1).is_floor()) {
 					draw_set_color(c_white);
 					draw_line(xoff+xx*tile_size, yoff+yy*tile_size, xoff+(xx+1)*tile_size, yoff+yy*tile_size);
 				}
 
-				if (!tiles[xx+(yy+1)*width].is_floor()) {
+				if (!tile_at(xx, yy+1).is_floor()) {
 					draw_set_color(c_white);
 					draw_line(xoff+xx*tile_size, yoff+(yy+1)*tile_size, xoff+(xx+1)*tile_size, yoff+(yy+1)*tile_size);
 				}

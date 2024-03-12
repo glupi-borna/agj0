@@ -23,6 +23,9 @@ function Menu_State(_name) : Game_State() constructor {
         ui.cursor.x = -offset+offset*ease_io_cubic(animate_io());
         ui.get_rect(0, WH/4);
 
+        bp_register("Arrows, WASD", "Change selection");
+        bp_register("Enter", "Confirm");
+
         menu();
 
         ui.end_frame();
@@ -35,7 +38,7 @@ function GS_Main_Menu() : Menu_State("MAIN MENU") constructor {
         ui.label($"Focus: {ui.focused}")
         ui.label($"Mode: {ui.input_mode == INPUT_MODE.BUTTONS ? "buttons" : "mouse"}")
         if (ui.button("play", "Play", 200)) {
-            set_game_state(new GS_Dungeon());
+            set_game_state(new GS_Level_Transition(0, 1, new GS_Dungeon()));
         }
 
         if (ui.button("opts", "Options", 200)) {
@@ -55,6 +58,10 @@ function GS_Options_Menu() : Menu_State("OPTIONS MENU") constructor {
             if (exitting() || entering()) return;
             ui.color(#aaaaaa);
             ui.label(text);
+        }
+
+        if (kbd_pressed(vk_escape, "ESC", "Back to main menu")) {
+            set_game_state(new GS_Main_Menu());
         }
 
         ui.start_row();

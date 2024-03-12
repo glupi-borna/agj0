@@ -20,6 +20,14 @@ function print() {
 
 function noop() {}
 
+function array_dup(arr) {
+	var out = array_create(array_length(arr));
+	for (var i=0; i<array_length(arr); i++) {
+		out[i] = arr[i];
+	}
+	return out;
+}
+
 function __assert_impl(condition, msg) {
 	if (!condition) {
 		show_message(msg);
@@ -185,24 +193,24 @@ vertex_begin(global.v_door, global.vertex_format);
 	vtx_norm(0, -1, 0);
 
 	vtx_pos(1, 0, 0);
-	vtx_tex(1, 1);
-	vtx_point(global.v_door);
-
-	vtx_pos(0, 0, 0);
 	vtx_tex(0, 1);
 	vtx_point(global.v_door);
 
+	vtx_pos(0, 0, 0);
+	vtx_tex(1, 1);
+	vtx_point(global.v_door);
+
 	vtx_pos(0, 0, 1);
-	vtx_tex(0, 0);
+	vtx_tex(1, 0);
 	vtx_point(global.v_door);
 	vtx_point(global.v_door);
 
 	vtx_pos(1, 0, 1);
-	vtx_tex(1, 0);
+	vtx_tex(0, 0);
 	vtx_point(global.v_door);
 
 	vtx_pos(1, 0, 0);
-	vtx_tex(1, 1);
+	vtx_tex(0, 1);
 	vtx_point(global.v_door);
 vertex_end(global.v_door);
 
@@ -328,16 +336,26 @@ function animation_play(model, inst_name, anim_name, spd, lerp_spd, reset=false)
 	inst.step(1);
 }
 
-/// @param {Function} _fn
-/// @param {real} _time
-function _ExecAfter(_fn, _args, _time) constructor {
-	fn = _fn;
-	args = _args;
-	time = _time;
-}
-
 /// @type {Array<Struct._ExecAfter>}
 global.exec_queue = [];
+
+/// @param {Function} _fn
+/// @param {Array} _args
+function _ExecFnBase(_fn, _args) constructor {
+	fn = _fn;
+	args = _args;
+
+	static exec = function() { script_execute_ext(fn, args); }
+	static is_ready = function() { return true; }
+}
+
+/// @param {Function} _fn
+/// @param {Array} _args
+/// @param {real} _time
+function _ExecAfter(_fn, _args, _time) : _ExecFnBase(_fn, _args) constructor {
+	time = _time;
+	static is_ready = function() { return current_time > time; }
+}
 
 /// @param {real} time
 /// @param {Function} fn
@@ -346,11 +364,29 @@ function after(time, fn, args) {
 	array_push(global.exec_queue, new _ExecAfter(fn, args, current_time+time));
 }
 
+/// @param {Function} _cond_fn
+/// @param {Array} _cond_args
+/// @param {Function} _fn
+/// @param {Array} _args
+function _ExecWhen(_cond_fn, _cond_args, _fn, _args) : _ExecFnBase(_fn, _args) constructor {
+	cond_fn = _cond_fn;
+	cond_args = _cond_args;
+	static is_ready = function() { return script_execute_ext(cond_fn, cond_args); }
+}
+
+/// @param {Function} cond_fn
+/// @param {Array} cond_args
+/// @param {Function} fn
+/// @param {Array} args
+function when(cond_fn, cond_args, fn, args) {
+	array_push(global.exec_queue, new _ExecWhen(cond_fn, cond_args, fn, args));
+}
+
 function drain_exec_queue() {
 	for (var i=array_length(global.exec_queue)-1; i>=0; i--) {
 		var it = global.exec_queue[i];
-		if (current_time > it.time) {
-			script_execute_ext(it.fn, it.args);
+		if (it.is_ready()) {
+			it.exec();
 			array_delete(global.exec_queue, i, 1);
 		}
 	}

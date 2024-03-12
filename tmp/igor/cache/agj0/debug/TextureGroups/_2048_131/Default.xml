@@ -7,13 +7,17 @@
   <texture scale="1" mipsToGenerate="0" texwidth="128" texheight="128">default_4.bz2</texture>
   <texture scale="1" mipsToGenerate="0" texwidth="64" texheight="64">default_5.bz2</texture>
   <texture scale="1" mipsToGenerate="0" texwidth="64" texheight="64">default_6.bz2</texture>
+  <texture scale="1" mipsToGenerate="0" texwidth="64" texheight="64">default_7.bz2</texture>
+  <texture scale="1" mipsToGenerate="0" texwidth="64" texheight="64">default_8.bz2</texture>
   <tpe x="0" y="0" tpage="default_0.bz2">spr_player_c547e27d-17b3-4e5f-a9ff-3056dc84a0d6.tpe</tpe>
   <tpe x="0" y="0" tpage="default_1.bz2">spr_chest_95eb7124-ed16-4783-9604-c8d9ca4d4dc1.tpe</tpe>
   <tpe x="0" y="0" tpage="default_2.bz2">spr_eye_515745eb-3720-4016-979a-56867989badb.tpe</tpe>
   <tpe x="0" y="0" tpage="default_3.bz2">spr_mouth_78a67e1b-8f11-4aa1-b79e-026f8cc5bb0a.tpe</tpe>
   <tpe x="2" y="2" tpage="default_4.bz2">spr_arrow_63a64689-3b6c-4a8b-87c1-96eafad7cc0e.tpe</tpe>
-  <tpe x="0" y="0" tpage="default_5.bz2">spr_door_5578caa2-4b54-4056-9f8f-2f974776f5a7.tpe</tpe>
-  <tpe x="0" y="0" tpage="default_6.bz2">spr_floor_brick_e81dcc46-6278-4d17-951f-6f130bb0b41b.tpe</tpe>
+  <tpe x="0" y="0" tpage="default_5.bz2">spr_bars_5578caa2-4b54-4056-9f8f-2f974776f5a7.tpe</tpe>
+  <tpe x="0" y="0" tpage="default_6.bz2">spr_brick_e81dcc46-6278-4d17-951f-6f130bb0b41b.tpe</tpe>
+  <tpe x="0" y="0" tpage="default_7.bz2">spr_concrete_2850ed1a-e5fe-4692-9b81-41cf1168a987.tpe</tpe>
+  <tpe x="0" y="0" tpage="default_8.bz2">spr_slidingdoor_5578caa2-4b54-4056-9f8f-2f974776f5a7.tpe</tpe>
   <tpe x="2" y="70" tpage="default_4.bz2">spr_mouth_icon_b505b1c3-850d-421e-946a-027155956082.tpe</tpe>
   <tpe x="70" y="2" tpage="default_4.bz2">spr_player_icon_f893ad4a-8753-4f90-bb6d-32b8b6272ce2.tpe</tpe>
 </TextureGroup>

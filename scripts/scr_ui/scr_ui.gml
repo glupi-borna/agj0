@@ -65,11 +65,11 @@ function UI() constructor {
         if (focused == id) saw_focused = true;
         var old_last = last;
         last = id;
-        if (keyboard_check_pressed(vk_down) && focused == old_last) set_focus(id);
+        if ((keyboard_check_pressed(vk_down) || keyboard_check_pressed(ord("S"))) && focused == old_last) set_focus(id);
         if (input_mode != INPUT_MODE.BUTTONS) return;
         if (focused == "-") set_focus(id);
         if (focused != id) return;
-        if (keyboard_check_pressed(vk_up)) set_focus(old_last);
+        if (keyboard_check_pressed(vk_up) || keyboard_check_pressed(ord("W"))) set_focus(old_last);
     }
 
     static get_rect = function (w, h) {
@@ -201,4 +201,82 @@ function ui_anim(start_time, current_time, duration) {
 function ease_io_cubic(x) {
     if (x<0.5) return 4*x*x*x;
     else return 1-power(-2*x+2,3)/2;
+}
+
+/// @param {real|Constant.VirtualKey} key
+/// @param {string} label
+/// @param {string} action
+function ButtonPrompt(key, label, action) constructor {
+    self.key = key;
+    self.label = label;
+    self.action = action;
+}
+
+/// @param {string|Constant.VirtualKey} key
+/// @param {string} label
+/// @param {string} action
+function kbd_pressed(key, label, action) {
+    if (typeof(key) == "string") { key = ord(string_upper(key)); }
+    array_push(global.button_prompts, new ButtonPrompt(key, label, action));
+    return keyboard_check_pressed(key);
+}
+
+/// @param {string|Constant.VirtualKey} key
+/// @param {string} label
+/// @param {string} action
+function kbd_released(key, label, action) {
+    if (typeof(key) == "string") { key = ord(string_upper(key)); }
+    array_push(global.button_prompts, new ButtonPrompt(key, label, action));
+    return keyboard_check_released(key);
+}
+
+/// @param {string|Constant.VirtualKey} key
+/// @param {string} label
+/// @param {string} action
+function kbd_down(key, label, action) {
+    if (typeof(key) == "string") { key = ord(string_upper(key)); }
+    array_push(global.button_prompts, new ButtonPrompt(key, label, action));
+    return keyboard_check(key);
+}
+
+function bp_register(label, action) {
+    array_push(global.button_prompts, new ButtonPrompt(-1, label, action));
+}
+
+/// @type {Array<Struct.ButtonPrompt>}
+global.button_prompts = [];
+global.last_keypress_time = current_time;
+
+function button_prompts_step() {
+    /// @type {Array<Struct.ButtonPrompt>}
+    global.button_prompts = [];
+    if (keyboard_check(vk_anykey)) global.last_keypress_time = current_time;
+}
+
+function button_prompts_render() {
+    do_2d();
+
+    var alpha = clamp(current_time - global.last_keypress_time - 2000, 0, 1000)/1000;
+    if (alpha == 0) return;
+    draw_set_alpha(alpha);
+
+    var xoff = 10;
+    for (var i=0; i<array_length(global.button_prompts); i++) {
+        var bp = global.button_prompts[i];
+        var lw = string_width(bp.label);
+        var aw = string_width(bp.action);
+
+        xoff += aw+4;
+        draw_set_color(c_white);
+        draw_text(WW-xoff+2, WH-30, bp.action);
+
+        xoff += lw+8;
+        draw_set_color(c_red);
+        draw_rectangle(WW-xoff, WH-34, WW-xoff+lw+8, WH-10, false);
+        draw_set_color(c_white);
+        draw_text(WW-xoff+4, WH-30, bp.label);
+
+        xoff += 8;
+    }
+    draw_set_alpha(1);
 }
