@@ -35,6 +35,10 @@ function v2(_x, _y) constructor {
         return self;
     }
 
+	static angle = function() {
+		return point_direction(0, 0, x, y);
+	}
+
 	static toString = function() {
 		return $"v2({x}, {y})"
 	}
@@ -224,6 +228,10 @@ function v3(_x, _y, _z) constructor {
     /// @param {Struct.v3} v
 	static eq = function(v) {
 		return x==v.x && y==v.y && z==v.z;
+	}
+
+	static xy = function() {
+		return new v2(x, y);
 	}
 
 	static toString = function() {

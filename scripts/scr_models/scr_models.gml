@@ -7,13 +7,14 @@ global.loaded_models_arr = [];
 /// @returns {Struct.smf_model|undefined}
 function get_model(name) {
     /// @type {Struct.smf_model|real}
-    var mmod = ds_map_find_value(global.loaded_models, name);
+    var mmod = global.loaded_models[? name];
 
     if (is_undefined(mmod)) {
         var path = name + ".smf";
         var buf = buffer_create(1, buffer_grow, 1);
+        print("Loading model");
         var async_id = buffer_load_async(buf, path, 0, -1);
-        global.loaded_models[? path] = async_id;
+        global.loaded_models[? name] = async_id;
 
         on_async(async_id, new Callback(function(buf, name){
             var model = smf_model_load_from_buffer(buf);

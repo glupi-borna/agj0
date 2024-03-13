@@ -49,21 +49,21 @@ function Character(_name, _stats, _model, _texture, _size, _floating) constructo
     static draw_head = function(x, y, hl) {
         draw_set_color(c_white);
         shader_set(sh_flat);
-        draw_sprite(icon, 0, x+5 + hl*5, y+5 + hl*5);
+        draw_sprite_ext(icon, 0, x+gui_px(5), y+gui_px(5), gui_px(1), gui_px(1), 0, hl?c_blue:c_white, 1);
         shader_reset();
 
         var perc = clamp(hp/stats.max_hp, 0, 1);
 
-        var w = 64;
-        var h = 10;
-        var p = 2;
+        var w = gui_px(64);
+        var h = gui_px(10);
+        var p = gui_px(2);
 
-        draw_sprite(icon, 0, x, y);
+        draw_sprite_ext(icon, 0, x, y, gui_px(1), gui_px(1), 0, c_white, 1);
         draw_set_color(c_white);
-        draw_rectangle(x, y+60, x+w, y+60+h, false);
+        draw_rectangle(x, y+(w-2*p), x+w, y+w-2*p+h, false);
 
         draw_set_color(c_blue);
-        draw_rectangle(x+p, y+60+p, x+(w-p)*perc, y+60+h-p, false);
+        draw_rectangle(x+p, y+w-p, x+(w-p)*perc, y+w-3*p+h, false);
     }
 }
 
@@ -221,15 +221,6 @@ function GS_Battle(
     }
 
     static init = function () {
-        if (audio_is_playing(mus_s2)) {
-            audio_sound_gain(mus_s2, 0, 100);
-            audio_stop_sound(mus_s2);
-        }
-
-        audio_play_sound(mus_s1, 1, true);
-        audio_sound_gain(mus_s1, 0, 0);
-        audio_sound_gain(mus_s1, 1, 100);
-
         if (initiative == INITIATIVE.ENEMY) {
             array_sort(enemies, sort_chars_by_speed);
             for (var i=0; i<array_length(enemies); i++) {
@@ -270,8 +261,14 @@ function GS_Battle(
 
         for (var i=0; i<array_length(turn_order); i++) {
             var char = turn_order[i];
-            anim_char(char, "idle", 0.01, 1);
+            anim_char(char, "default", 0.01, 1);
             char.fwd.setv(default_look_dir(char));
+        }
+
+        var char = turn_order[current_turn];
+        while (char.hp <= 0) {
+            current_turn = (current_turn+1)%array_length(turn_order);
+            char = turn_order[current_turn];
         }
 
         var ct = battle_turn_cam_target(self);
@@ -279,22 +276,8 @@ function GS_Battle(
         cam_target_fwd = ct[1];
     }
 
-    static stop_music = function() {
-        audio_sound_gain(mus_s1, 0, 500);
-
-        audio_play_sound(mus_s2, 1, true);
-        audio_sound_gain(mus_s2, 0, 0);
-        audio_sound_gain(mus_s2, 1, 500);
-
-        after(500, function() {
-            audio_sound_set_track_position(mus_s1, 0);
-            audio_stop_sound(mus_s1);
-        }, []);
-    }
-
     static end_battle = function() {
         set_game_state(gs, false, true);
-        stop_music();
     }
 
     /// @param {Struct.Character} char
@@ -303,7 +286,17 @@ function GS_Battle(
     /// @param {real} lspd
     static anim_char = function(char, anim_name, spd, lspd) {
         var idx = array_get_index(turn_order, char);
-        animation_play(char.model, $"battle:{idx}", anim_name, spd, lspd, true);
+        if (anim_name == "default") {
+            if (char.hp == 0) {
+                anim_char(char, "death", spd, 0.2);
+            } else if (char.hp < char.stats.max_hp*0.33) {
+                anim_char(char, "idle_hurt", spd, 0.2);
+            } else {
+                anim_char(char, "idle", spd, 0.2);
+            }
+        } else {
+            animation_play(char.model, $"battle:{idx}", anim_name, spd, lspd, true);
+        }
     }
 
     static update = function () {
@@ -315,9 +308,8 @@ function GS_Battle(
             }
 
             if (array_all(party, function(e) {return e.hp==0})) {
-                stop_music();
-                gs.level_transition()
-                set_game_state(new GS_Main_Menu());
+                gs.level_transition(gs.lvl);
+                return;
             }
 
             // for (var i=0; i<array_length(turn_order); i++) {
@@ -373,18 +365,7 @@ function GS_Battle(
                 } else if (is_instanceof(current_seq_item, Seq_Anim)) {
                     /// @type {Struct.Seq_Anim}
                     var a = current_seq_item;
-                    if (a.anim_name == "default") {
-                        if (a.char.hp == 0) {
-                            anim_char(a.char, "death", a.spd, 0.2);
-                        } else if (a.char.hp < a.char.stats.max_hp*0.33) {
-                            anim_char(a.char, "idle_hurt", a.spd, 0.2);
-                        } else {
-                            anim_char(a.char, "idle", a.spd, 0.2);
-                        }
-
-                    } else {
-                        anim_char(a.char, a.anim_name, a.spd, 0.2);
-                    }
+                    anim_char(a.char, a.anim_name, a.spd, 0.2);
                     current_seq_item = undefined;
 
                 } else if (is_instanceof(current_seq_item, Seq_Do)) {
@@ -430,15 +411,15 @@ function GS_Battle(
                 new Seq_Anim(target, "damage", 0.02),
                 new Seq_Do(function(t, e){ t.damaged_by(e, 10); }, [target, enemy]),
                 new Seq_Wait(250),
-                new Seq_Anim(target, "default", 0.02),
+                new Seq_Anim(target, "default", 0.01),
                 new Seq_Anim(enemy, "default", 0.01),
                 new Seq_Move(enemy, old_pos, 500),
             ];
             state = BATTLE_STATE.ANIMATION;
 
         } else if (is_party_turn() && current_turn == will_run) {
-            show_notif("Ran away!");
-            end_battle();
+            gs.level_transition(-1, "You managed to get away!");
+            return;
         }
     }
 
@@ -457,15 +438,15 @@ function GS_Battle(
         var Y = WH*0.33;
         for (var i=0; i<array_length(enemies); i++) {
             var e = enemies[i];
-            e.draw_head(10, Y, turn_order[current_turn]==e);
-            Y += 84;
+            e.draw_head(gui_px(10), Y, turn_order[current_turn]==e);
+            Y += gui_px(84);
         }
 
         Y = WH*0.33;
         for (var i=0; i<array_length(party); i++) {
             var c = party[i];
-            c.draw_head(WW-74, Y, turn_order[current_turn]==c);
-            Y += 84;
+            c.draw_head(WW-gui_px(74), Y, turn_order[current_turn]==c);
+            Y += gui_px(84);
         }
 
         switch (state) {
@@ -480,17 +461,17 @@ function GS_Battle(
 
                 if (menu == BATTLE_MENU.MAIN) {
 
-                    if (ui.button("throw", "Attack", 200)) {
+                    if (ui.button("throw", "Attack", gui_px(200))) {
                         menu_item = undefined;
                         menu = BATTLE_MENU.ENEMIES;
                     }
 
-                    if (ui.button("use", "Use item", 200)) {
+                    if (ui.button("use", "Use item", gui_px(200))) {
                         menu = BATTLE_MENU.ITEMS;
                     }
 
                     if (will_run == -1) {
-                        if (ui.button("run", "Run", 200)) {
+                        if (ui.button("run", "Run", gui_px(200))) {
                             will_run = current_turn;
                             state = BATTLE_STATE.ANIMATION;
                             sequence = [];
@@ -500,30 +481,26 @@ function GS_Battle(
                 } else if (menu == BATTLE_MENU.ITEMS) {
                     /// @type {Array<Struct.Item>}
                     var inv = ds_map_keys_to_array(gs.inventory.items);
-                    var hint = "";
 
                     for (var i=0; i<array_length(inv); i++) {
                         var item = inv[i];
                         var count = gs.inventory.items[? item];
 
                         ui.start_row();
-                        if (ui.button($"item:{item.name}", item.name, 200)) {
-                            menu_item = item;
-                            menu = BATTLE_MENU.ENEMIES;
-                            gs.inventory.remove(item, 1);
-                        }
-
-                        ui.color(c_white);
-                        ui.bgrect(20, 20);
-                        ui.color(c_black);
-                        ui.label($"{count}")
-
+                            if (ui.button($"item:{item.name}", item.name, gui_px(200))) {
+                                menu_item = item;
+                                menu = BATTLE_MENU.ENEMIES;
+                                gs.inventory.remove(item, 1);
+                            }
+                            ui.hint(item.desc);
+                            ui.label_bg($"x{count}", c_white);
                         ui.end_container();
-
-                        if (ui.last == ui.focused) hint = item.desc;
                     }
 
-                    ui.start_row(); ui.get_rect(100, 20); ui.label(hint); ui.end_container();
+                    ui.start_row();
+                        ui.get_rect(gui_px(50), 0);
+                        ui.label_bg(ui.hint_text, c_black, 0, c_white);
+                    ui.end_container();
 
                     if (ui.button("back", "Back")) {
                         menu = BATTLE_MENU.MAIN;

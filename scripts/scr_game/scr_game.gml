@@ -1,3 +1,13 @@
+function Interactive() constructor {
+	static interactive = function() { return false; }
+	static interact_label = function() { return ""; }
+	/// @param {Struct.GS_Dungeon} d
+	static interact = function(d) {}
+    static raises_camera = function() { return false; }
+    /// @returns {Struct.Rect|Undefined}
+	static collider = function() {}
+}
+
 function Game_State() constructor {
     name = "UNKNOWN";
     /// @type {real}
@@ -187,7 +197,7 @@ function Enemy(_name, _model, _tex, _size, _floating, _stats) constructor {
 function mouth(lvl) {
     return new Enemy(
         "Mouth", "mouth", spr_mouth, 12, true,
-        new Stats(lvl, 50+lvl*5, 10+lvl*1)
+        new Stats(lvl, 3+lvl, 1+floor(lvl*0.5))
     );
 }
 
@@ -199,7 +209,7 @@ function get_enemy(lvl) {
 enum DE_STATE { WAIT, WANDER, CHASE, ATTACK };
 
 /// @param {Struct.Enemy} _data
-function Dungeon_Enemy(_data) constructor {
+function Dungeon_Enemy(_data) : Interactive() constructor {
     data = _data;
     pos = new v3(0, 0, 0);
     fwd = new v3(1, 1, 0).normalize();
@@ -207,6 +217,39 @@ function Dungeon_Enemy(_data) constructor {
     state = DE_STATE.WAIT;
     state_time = current_time;
     wait_time = irandom_range(0, 5000);
+
+    static interactive = function () { return true; }
+
+    static interact_label = function () {
+        if (!is_instanceof(global.game_state, GS_Dungeon)) return "";
+        if (state == DE_STATE.CHASE || state == DE_STATE.ATTACK) return "Attack";
+
+        /// @type {Struct.GS_Dungeon}
+        var d = global.game_state;
+
+        var pdir = d.player.pos.copy().subv(pos).xy().angle();
+        if (abs(angle_difference(0, pdir)) > 90) {
+            return "Sneak attack";
+        } else {
+            return "Attack";
+        }
+    }
+
+    /// @param {Struct.GS_Dungeon} gs
+    static interact = function (gs) {
+        if (!is_instanceof(gs, GS_Dungeon)) return "";
+        var pdir = gs.player.pos.copy().subv(pos).xy().angle();
+        if (abs(angle_difference(0, pdir)) > 90) {
+            gs.start_battle(pos.x, pos.y, INITIATIVE.PARTY);
+        } else {
+            gs.start_battle(pos.x, pos.y, INITIATIVE.NONE);
+        }
+    }
+
+    static collider = function () {
+        var rad = 6;
+        return new Rect(-rad, -rad, rad*2, rad*2);
+    }
 
     /// @param {Struct.Dungeon} d
     /// @param {Struct.Dungeon_Player} p
@@ -228,32 +271,10 @@ function Dungeon_Enemy(_data) constructor {
         switch (state) {
             case DE_STATE.ATTACK:
                 if (current_time - state_time > wait_time) {
-                    /// @type {Array<Struct.Dungeon_Enemy>}
-                    var enemies = [];
-                    for (var i=0; i<array_length(global.game_state.enemies); i++) {
-                        var e = global.game_state.enemies[i];
-                        if (point_distance(pos.x, pos.y, e.pos.x, e.pos.y) < TILE_SIZE*2) {
-                            array_push(enemies, e);
-                            if (array_length(enemies) == 3) break;
-                        }
-                    }
-
-                    after(500, function(enemies, gs) {
-                        for (var i=0; i<array_length(enemies); i++) {
-                            array_delete(gs.enemies, array_get_index(gs.enemies, enemies[i]), 1)
-                        }
-                    }, [enemies, global.game_state]);
-
-                    /// @type {Array<Struct.Character>}
-                    var enemy_chars = array_map(
-                        enemies,
-                        /// @param {Struct.Dungeon_Enemy} e
-                        function(e) {return e.data.char()}
-                    );
-
-                    set_game_state(
-                        new GS_Battle(global.game_state, enemy_chars, INITIATIVE.ENEMY)
-                    );
+                    if (!is_instanceof(global.game_state, GS_Dungeon)) return;
+                    /// @type {Struct.GS_Dungeon}
+                    var gs = global.game_state;
+                    gs.start_battle(pos.x, pos.y, INITIATIVE.ENEMY);
                     state = DE_STATE.CHASE;
                 }
             break;
@@ -394,8 +415,8 @@ function Dungeon_Party(tex) constructor {
 
         var movement = pos.copy().subv(old_pos);
         if (movement.len() > 1) {
-            var anim_spd = 0.015 * movement.len();
-            animation_play("char", $"party:{formation_offset}", "walk", anim_spd, 0.2);
+            var anim_spd = 0.0075 * movement.len();
+            animation_play("char", $"party:{formation_offset}", "run", anim_spd, 0.2);
         } else {
             animation_play("char", $"party:{formation_offset}", "idle", 0.015, 0.2);
         }
@@ -436,14 +457,13 @@ function Dungeon_Player() constructor {
         movement.addv(mv.copy().subv(movement).scale(0.2));
         move(dungeon, pos, movement.x, movement.y, 6);
 
-        var lerp_spd = animation_is_playing("char", "player") ? 1 : 0.2;
         if (old_pos.copy().subv(pos).len() < 0.5) {
-            animation_play("char", "player", "idle", 0.01, lerp_spd);
+            animation_play("char", "player", "idle", 0.01, 0.2);
         } else {
             var fwd_dir = point_direction(0, 0, fwd.x, fwd.y);
             var mv_dir = point_direction(0, 0, movement.x, movement.y);
-            var anim_spd = 0.015 * movement.len();
-            animation_play("char", "player", "walk", anim_spd, lerp_spd);
+            var anim_spd = 0.0075 * movement.len();
+            animation_play("char", "player", "run", anim_spd, 0.2);
         }
     }
 
@@ -496,22 +516,33 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
     msg = "";
 
     static go_to_dungeon = function() {
-        gs.lvl = to_lvl;
-        gs.generate_dungeon();
+        gs.max_depth = max(to_lvl, gs.max_depth);
+
+        if (to_lvl != -1) {
+            gs.lvl = to_lvl;
+            gs.generate_dungeon();
+        }
+
         set_game_state(gs);
 
-        if (!audio_is_playing(mus_s2)) {
-            audio_play_sound(mus_s2, 1, true);
-            audio_sound_gain(mus_s2, 0, 0);
-            audio_sound_gain(mus_s2, 1, 500);
+        if (to_lvl < from_lvl && to_lvl != -1) {
+            when(
+                function () { return is_instanceof(global.game_state, GS_Dungeon); }, [],
+                function () {
+                    /// @type {Struct.GS_Dungeon}
+                    var gs = global.game_state;
+                    var stv = gs.dungeon.find_exit_stairs();
+                    var st = gs.dungeon.tile_at(stv.x, stv.y);
+                    st.place_player_in_front_of(stv.x, stv.y, gs);
+                }, []
+            );
         }
     }
 
-    static max_depth = -1;
-
     /// @param {Array<string>} _msgs
     static first_time_msg = function(_msgs) {
-        if (max_depth > from_lvl) return [];
+        print("TO", to_lvl, "MAX", gs.max_depth);
+        if (gs.max_depth >= to_lvl) return [];
         return _msgs;
     }
 
@@ -528,8 +559,6 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
                     "We must descend into the depths,\nbeneath the facility where it all started.",
                 ]);
             } else if (from_lvl == 1 && to_lvl == 2) {
-                msgs = first_time_msg(["It's hard to believe that this is the basement of an office building."]);
-            } else if (from_lvl == 2 && to_lvl == 3) {
                 msgs = first_time_msg(["The floors rumble and the walls shift\neach time we descend."]);
             } else if (from_lvl == 3 && to_lvl == 4) {
                 msgs = first_time_msg(["Those things are getting tougher."]);
@@ -554,8 +583,6 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
                 msgs = [];
             }
         }
-
-        max_depth = max(to_lvl, max_depth);
 
         if (array_length(msgs) == 0) {
             go_to_dungeon();
@@ -589,7 +616,7 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
         draw_set_color(c_white);
         draw_set_halign(fa_center);
         draw_set_valign(fa_middle);
-        draw_text(WW/2, WH/2, msg);
+        render_text(WW/2, WH/2, msg);
         draw_set_halign(fa_left);
         draw_set_valign(fa_top);
 
@@ -608,27 +635,34 @@ function GS_Dungeon() : Game_State() constructor {
     dungeon = new Dungeon(50, 50);
 
     inventory = new Inventory();
+    max_depth = -1;
+    interacted_with_well = false;
 
     /// @type {Struct.Dungeon_Player}
     player = new Dungeon_Player();
 
+    when(
+        function() { return !is_undefined(get_anim_inst("char", "player")); }, [],
+        function() { animation_play("char", $"player", "idle", 0.015, 1); }, []
+    );
+
     /// @type {Array<Struct.Dungeon_Party>}
-    party_members = [new Dungeon_Party(spr_girl), new Dungeon_Party(spr_player)];
+    party_members = [new Dungeon_Party(spr_girl), new Dungeon_Party(spr_suit)];
 
     party = [
         new Character(
             "Green",
-            new Stats(1, 100, 3),
+            new Stats(1, 10, 3),
             "char", spr_player, 12, false
         ),
         new Character(
             "Suit",
-            new Stats(1, 100, 3),
-            "char", spr_player, 12, false
+            new Stats(1, 10, 3),
+            "char", spr_suit, 12, false
         ),
         new Character(
             "Girl",
-            new Stats(1, 100, 3),
+            new Stats(1, 10, 3),
             "char", spr_girl, 12, false
         )
     ];
@@ -638,40 +672,103 @@ function GS_Dungeon() : Game_State() constructor {
 
     lvl = 1;
 
-    /// @type {Struct.Tile|Undefined}
-    interact_tile = undefined;
+    /// @type {Struct.Interactive|Undefined}
+    interact_target = undefined;
     interact_tile_time = 0;
     enter_duration = 500;
     exit_duration = 500;
 
     static generate_dungeon = function() {
-        dungeon.clear();
-        dungeon.generate(lvl, [mouth], self);
+        var ok = false;
+        var attempts = 99;
+        while (!ok && attempts > 0) {
+            dungeon.clear();
+            ok = dungeon.generate(lvl, [mouth], self);
+        }
+        if (!ok) game_end();
 
         var f = -0.5;
         for (var i=0; i<array_length(party_members); i++) {
             var p = party_members[i];
             p.formation_offset = f;
+
+            when(
+                function(fo) { return !is_undefined(get_anim_inst("char", $"party:{fo}")); }, [f],
+                function(fo) { animation_play("char", $"party:{fo}", "idle", 0.015, 1) }, [f]
+            );
+
             f++;
             p.pos.setv(p.target_pos(player));
         }
     }
 
     /// @param {real} next_lvl
-    static level_transition = function(next_lvl) {
-        set_game_state(new GS_Level_Transition(lvl, next_lvl, self));
+    /// @param {Array<string>} msgs
+    static level_transition = function(next_lvl, msgs=undefined) {
+        set_game_state(new GS_Level_Transition(lvl, next_lvl, self, msgs));
+    }
+
+    /// @param {real} x
+    /// @param {real} y
+    /// @param {Enum.INITIATIVE} initiative
+    static start_battle = function(x, y, initiative) {
+        /// @type {Array<Struct.Dungeon_Enemy>}
+        var engaged_enemies = [];
+        for (var i=0; i<array_length(enemies); i++) {
+            var e = enemies[i];
+            if (point_distance(x, y, e.pos.x, e.pos.y) < TILE_SIZE*2) {
+                array_push(engaged_enemies, e);
+                if (array_length(engaged_enemies) == 3) break;
+            }
+        }
+
+        if (initiative == INITIATIVE.PARTY) {
+            var closest_enemy = engaged_enemies[0];
+            var dist = infinity;
+
+            for (var i=0; i<array_length(engaged_enemies); i++) {
+                var e = engaged_enemies[i];
+                var d = point_distance(x, y, e.pos.x, e.pos.y);
+                if (d < dist) {
+                    dist = d;
+                    closest_enemy = e;
+                }
+            }
+
+            engaged_enemies = [closest_enemy];
+        }
+
+        after(500, function(engaged_enemies, gs) {
+            for (var i=0; i<array_length(engaged_enemies); i++) {
+                array_delete(gs.enemies, array_get_index(gs.enemies, engaged_enemies[i]), 1)
+            }
+        }, [engaged_enemies, self]);
+
+        /// @type {Array<Struct.Character>}
+        var enemy_chars = array_map(
+            engaged_enemies,
+            /// @param {Struct.Dungeon_Enemy} e
+            function(e) {return e.data.char()}
+        );
+
+        set_game_state(
+            new GS_Battle(self, enemy_chars, initiative)
+        );
     }
 
     static gui = function() {
-        #macro GUI_TILE_SIZE (5)
+        #macro GUI_TILE_SIZE (gui_px(5))
         #macro WORLD_TO_GUI (GUI_TILE_SIZE/TILE_SIZE)
 
         do_2d();
         var px = player.pos.x * WORLD_TO_GUI;
         var py = player.pos.y * WORLD_TO_GUI;
-        dungeon.render(GUI_TILE_SIZE, floor(-px+100), floor(-py+100));
+        var offx = gui_px(100);
+        var offy = gui_px(100);
+
+        dungeon.render(GUI_TILE_SIZE, floor(-px+offx), floor(-py+offy));
         var dir = point_direction(0, 0, player.fwd.x, player.fwd.y)-45;
-        draw_sprite_ext(spr_arrow, 0, 100, 100, 0.125, 0.125, dir, c_white, 1);
+        draw_sprite_ext(spr_arrow, 0, offx, offy, gui_px(0.125), gui_px(0.125), dir, c_white, 1);
 
         if (entering()||exitting()) {
             draw_set_color(c_black);
@@ -682,41 +779,35 @@ function GS_Dungeon() : Game_State() constructor {
 
         /// TODO: Make popup a global thing so that the exit animation will not be bound to game_state
         static popup_width = 0;
-        if (!is_undefined(interact_tile) || popup_width>=1) {
+        if (!is_undefined(interact_target) || popup_width>=1) {
             var label = "";
-            if (!is_undefined(interact_tile)) {
-                label = interact_tile.interact_label();
+            if (!is_undefined(interact_target)) {
+                label = interact_target.interact_label();
             }
-            var text_width = string_width(label);
-            var target_width = text_width == 0 ? 0 : text_width+20;
+            var w = text_width(label);
+            var pad = gui_px(20);
+            var target_width = w == 0 ? 0 : w+pad;
             popup_width = lerp(popup_width, target_width, 0.2);
             var half = popup_width/2;
 
             draw_set_color(c_red);
-            draw_rectangle(WW*3/4-half, WH/2, WW*3/4+half, WH/2+40, false);
+            draw_rectangle(WW*3/4-half, WH/2, WW*3/4+half, WH/2+2*pad, false);
             draw_set_color(c_white);
 
-            if (popup_width > target_width-20) {
-                draw_text(WW*3/4-half+10, WH/2+10, label);
+            if (popup_width > target_width-gui_px(pad)) {
+                render_text(WW*3/4-half+pad/2, WH/2+pad/2, label);
             }
         }
 
         draw_set_color(c_white);
-        interact_tile = undefined;
     }
 
     static update = function() {
         if (exitting()) return;
 
-        if (keyboard_check_pressed(vk_f2)) {
-            for (var i=0; i<array_length(dungeon.rooms); i++) {
-                var r = dungeon.rooms[i];
-                if (!r.has_tile_of_kind(TILE.WELL)) continue;
-                var wp = r.find_tile_of_kind(dungeon, TILE.FLOOR);
-                if (!is_undefined(wp)) {
-                    player.pos.set(wp.x+0.5, wp.y+0.5, 0).scale(TILE_SIZE);
-                }
-            }
+        if (kbd_released(vk_escape, "ESC", "Menu")) {
+            set_game_state(new GS_Menu_Ingame(self), true, false);
+            return;
         }
 
         // if (keyboard_check_pressed(vk_f2)) {
@@ -744,33 +835,54 @@ function GS_Dungeon() : Game_State() constructor {
         dungeon.discover(ptf.x, ptf.y);
 
         var dir = point_direction(0, 0, player.fwd.x, player.fwd.y);
-        var t1 = pt.copy();
-        var t2 = new v2(t1.x+lengthdir_x(1, dir-22.5), t1.y+lengthdir_y(1, dir-22.5));
-        var t3 = new v2(t1.x+lengthdir_x(1, dir+22.5), t1.y+lengthdir_y(1, dir+22.5));
+        var t1 = player.pos.copy();
+        var t2 = new v2(t1.x+lengthdir_x(TILE_SIZE, dir-22.5), t1.y+lengthdir_y(TILE_SIZE, dir-22.5));
+        var t3 = new v2(t1.x+lengthdir_x(TILE_SIZE, dir+22.5), t1.y+lengthdir_y(TILE_SIZE, dir+22.5));
 
-        interact_tile = undefined;
-        var dist = infinity;
-        for (var tx=ptf.x-1; tx<=ptf.x+1; tx++) {
-            for (var ty=ptf.y-1; ty<=ptf.y+1; ty++) {
-                var t = dungeon.tile_at(tx, ty);
-                if (!t.interactive()) continue;
-                var c = t.collider();
-                if (is_undefined(c)) continue;
-                var rx1 = tx + c.x;
-                var ry1 = ty + c.y;
-                var rx2 = rx1 + c.w;
-                var ry2 = ry1 + c.h;
-                if (!rectangle_in_triangle(rx1, ry1, rx2, ry2, t1.x, t1.y, t2.x, t2.y, t3.x, t3.y)) continue;
-                var d = point_distance(pt.x, pt.y, (rx1+rx2)/2, (ry1+ry2)/2);
-                if (d < dist) {
-                    interact_tile = t;
-                    dist = d;
+        /// Enemy interaction
+        interact_target = undefined;
+        for (var i=0; i<array_length(enemies); i++) {
+            var e = enemies[i];
+            var c = e.collider();
+            if (is_undefined(c)) continue;
+            var rx1 = e.pos.x + c.x;
+            var ry1 = e.pos.y + c.y;
+            var rx2 = rx1 + c.w;
+            var ry2 = ry1 + c.h;
+            if (!rectangle_in_triangle(rx1, ry1, rx2, ry2, t1.x, t1.y, t2.x, t2.y, t3.x, t3.y)) continue;
+            interact_target = e;
+            break;
+        }
+
+        /// Tile interaction
+        if (is_undefined(interact_target)) {
+            t1 = pt.copy();
+            t2 = new v2(t1.x+lengthdir_x(1, dir-22.5), t1.y+lengthdir_y(1, dir-22.5));
+            t3 = new v2(t1.x+lengthdir_x(1, dir+22.5), t1.y+lengthdir_y(1, dir+22.5));
+
+            var dist = infinity;
+            for (var tx=ptf.x-1; tx<=ptf.x+1; tx++) {
+                for (var ty=ptf.y-1; ty<=ptf.y+1; ty++) {
+                    var t = dungeon.tile_at(tx, ty);
+                    if (!t.interactive()) continue;
+                    var c = t.collider();
+                    if (is_undefined(c)) continue;
+                    var rx1 = tx + c.x;
+                    var ry1 = ty + c.y;
+                    var rx2 = rx1 + c.w;
+                    var ry2 = ry1 + c.h;
+                    if (!rectangle_in_triangle(rx1, ry1, rx2, ry2, t1.x, t1.y, t2.x, t2.y, t3.x, t3.y)) continue;
+                    var d = point_distance(pt.x, pt.y, (rx1+rx2)/2, (ry1+ry2)/2);
+                    if (d < dist) {
+                        interact_target = t;
+                        dist = d;
+                    }
                 }
             }
         }
 
-        if (!is_undefined(interact_tile) && kbd_released(vk_enter, "Enter", "Interact")) {
-            interact_tile.interact(self);
+        if (!is_undefined(interact_target) && kbd_released(vk_enter, "Enter", interact_target.interact_label())) {
+            interact_target.interact(self);
         }
     }
 
@@ -780,12 +892,10 @@ function GS_Dungeon() : Game_State() constructor {
 
         draw_clear(gpu_get_fog()[1]);
 
-        if (is_undefined(interact_tile)) {
+        if (is_undefined(interact_target)) {
             interact_tile_time = clamp(interact_tile_time-(delta_time/1000), 0, 500);
         } else {
-            var is_well = interact_tile.kind == TILE.WELL;
-            var is_stairs = interact_tile.kind == TILE.STAIRS || interact_tile.kind == TILE.STAIRS_CHILD;
-            if (is_well || (is_stairs && interact_tile.direction==1)) {
+            if (interact_target.raises_camera()) {
                 interact_tile_time = clamp(interact_tile_time+(delta_time/1000), 0, 500);
             } else {
                 interact_tile_time = clamp(interact_tile_time-(delta_time/1000), 0, 500);
@@ -950,11 +1060,13 @@ function GS_Dungeon_Dialog(_root_gs, _dialog) : Game_State() constructor {
 
         switch (dialog.kind) {
             case DIALOG.NOTIF:
-                var w = (string_width(dialog.text)+40)/2 * ease_io_cubic(animate_io());
+                var xpad = gui_px(20);
+                var ypad = gui_px(5);
+                var w = (text_width(dialog.text)+2*xpad)/2 * ease_io_cubic(animate_io());
                 var x1 = WW/4 - w;
                 var x2 = WW/4 + w;
 
-                var h = 40;
+                var h = text_height(dialog.text) + ypad*2;
                 var y1 = WH/2 - h/2;
                 var y2 = y1+h;
                 draw_set_color(c_blue);
@@ -962,26 +1074,26 @@ function GS_Dungeon_Dialog(_root_gs, _dialog) : Game_State() constructor {
 
                 if (animate_io() == 1) {
                     draw_set_color(c_white);
-                    draw_text(x1+20, y1+10, dialog.text);
+                    render_text(x1+xpad, y1+ypad, dialog.text);
                 }
             break;
 
             case DIALOG.CHAT:
-                var w = (WW-40)/2 * ease_io_cubic(animate_io());
-                var x1 = WW/2 - w;
-                var x2 = WW/2 + w;
+                // var w = (WW-40)/2 * ease_io_cubic(animate_io());
+                // var x1 = WW/2 - w;
+                // var x2 = WW/2 + w;
 
-                var h = 200;
-                var y1 = WH - h - 20;
-                var y2 = y1+h;
-                draw_set_color(c_blue);
-                draw_rectangle(x1, y1, x2, y2, false);
+                // var h = 200;
+                // var y1 = WH - h - 20;
+                // var y2 = y1+h;
+                // draw_set_color(c_blue);
+                // draw_rectangle(x1, y1, x2, y2, false);
 
-                if (animate_io() == 1) {
-                    draw_set_color(c_white);
-                    draw_text(x1+20, y1+20, dialog.label);
-                    draw_text_ext(x1+20, y1+40, dialog.text, 2, w-40);
-                }
+                // if (animate_io() == 1) {
+                //     draw_set_color(c_white);
+                //     render_text(x1+20, y1+20, dialog.label);
+                //     draw_text_ext(x1+20, y1+40, dialog.text, 2, w-40);
+                // }
             break;
         }
     }
