@@ -201,6 +201,15 @@ function mouth(lvl) {
     );
 }
 
+/// @param {real} lvl
+function eye(lvl) {
+    return new Enemy(
+        "Eye", "eye", spr_eye, 10, true,
+        new Stats(lvl, 3+lvl, 1+floor(lvl*0.5))
+    );
+}
+
+
 function get_enemy(lvl) {
     var fn = choose(mouth, mouth);
     return fn(lvl);
@@ -707,7 +716,7 @@ function GS_Dungeon() : Game_State() constructor {
         var attempts = 99;
         while (!ok && attempts > 0) {
             dungeon.clear();
-            ok = dungeon.generate(lvl, [mouth], self);
+            ok = dungeon.generate(lvl, [mouth, eye], self);
         }
         if (!ok) game_end();
 
