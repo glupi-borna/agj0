@@ -114,6 +114,7 @@ function GS_Menu_Stats(gs) : GS_Ingame_Menu_State(gs, "INGAME STATS") constructo
 
         do_2d();
 
+        ui.cursor.y += gui_px(100);
         ui.label_bg($"LVL {focus_char.stats.lvl}", c_blue, gui_px(200), c_white);
         ui.label_bg($"HP: {focus_char.hp} / {focus_char.stats.max_hp}", c_blue, gui_px(200), c_white);
         ui.label_bg($"Speed: {focus_char.stats.speed}", c_blue, gui_px(200), c_white);
@@ -159,8 +160,8 @@ function GS_Menu_Inv(gs) : GS_Ingame_Menu_State(gs, "INGAME INV") constructor {
         if (is_undefined(focus_item)) return;
         var time_since_focus = current_time - focus_time;
         var t = 1-ease_io_cubic(clamp(time_since_focus, 0, 500)/500);
-        var t2 = (1-animate_io())*250;
-        ui.cursor.set(WW-250 + 500*t + t2, WH/2);
+        var t2 = (1-animate_io())*WW/2;
+        ui.cursor.set(WW/2 + WW/2*t + t2, WH/2);
 
         ui.label_bg(focus_item.desc, c_white);
     }

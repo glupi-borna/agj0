@@ -1,6 +1,6 @@
 {
   "$GMSound":"",
-  "%Name":"sfx_step4",
+  "%Name":"sfx_swing1",
   "audioGroupId":{
     "name":"audiogroup_default",
     "path":"audiogroups/audiogroup_default",
@@ -9,8 +9,8 @@
   "bitRate":128,
   "compression":0,
   "conversionMode":0,
-  "duration":0.580499,
-  "name":"sfx_step4",
+  "duration":0.229161,
+  "name":"sfx_swing1",
   "parent":{
     "name":"SFX",
     "path":"folders/Sounds/SFX.yy",
@@ -19,7 +19,7 @@
   "resourceType":"GMSound",
   "resourceVersion":"2.0",
   "sampleRate":44100,
-  "soundFile":"sfx_step4.wav",
+  "soundFile":"sfx_swing1.wav",
   "type":0,
   "volume":1.0,
 }

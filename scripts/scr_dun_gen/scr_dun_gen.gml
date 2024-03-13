@@ -37,12 +37,6 @@ function get_current_level() {
 	return -1;
 }
 
-function update_bgm() {
-	if (is_instanceof(global.game_state, GS_Battle)) set_bgm(mus_s1);
-	else if (!is_undefined(get_dungeon_gs())) set_bgm(mus_s2);
-	else set_bgm(undefined);
-}
-
 function get_floor_tex() {
 	var lvl = get_current_level();
 	if (lvl < 5) return spr_concrete;
@@ -55,6 +49,13 @@ function get_door_tex() {
 	if (lvl < 5) return spr_slidingdoor;
 	if (lvl < 10) return spr_bars;
 	return spr_bars;
+}
+
+function get_door_sound() {
+	var lvl = get_current_level();
+	if (lvl < 5) return sfx_door_scifi;
+	if (lvl < 10) return sfx_door_stone;
+	return sfx_door_stone;
 }
 
 /// @param {real} x
@@ -263,6 +264,7 @@ function Tile(kind) : Interactive() constructor {
 				var amt = irandom_range(3, 10);
 				animation_play("chest", "chest_opening", "opening", 0.03, 1, true);
 				gs.inventory.add(i, amt);
+				after(200, play_sfx, [choose(sfx_chest1, sfx_chest2, sfx_chest3), gs.player.pos]);
 				show_notif($"Got {i.name} x{amt}!");
 				return;
 
@@ -272,11 +274,13 @@ function Tile(kind) : Interactive() constructor {
 				var amt = irandom_range(1, 5);
 				animation_play("chest", "chest_opening", "opening", 0.03, 1, true);
 				gs.inventory.add(i, amt);
+				after(200, play_sfx, [choose(sfx_chest1, sfx_chest2, sfx_chest3), gs.player.pos]);
 				show_notif($"Got {i.name} x{amt}!");
 				return;
 
 			case TILE.DOOR:
 				open = current_time;
+				play_sfx(get_door_sound(), gs.player.pos);
 				return;
 
 			case TILE.STAIRS:
@@ -285,6 +289,8 @@ function Tile(kind) : Interactive() constructor {
 				if (next_lvl == 0) {
 					show_notif("Leaving is not an option. We must descend.");
 				} else {
+                    var pos = gs.cam_pos;
+                    timed_sequence(200, 5, function(pos) { play_sfx(choose(sfx_step1, sfx_step2, sfx_step3), pos); }, [pos]);
 					gs.level_transition(next_lvl);
 				}
 				return;
@@ -294,16 +300,17 @@ function Tile(kind) : Interactive() constructor {
 					if (open != -1) {
 						show_notif("There is no water in the well.");
 					} else {
-						open = current_time;
-						for (var i=0; i<array_length(gs.party); i++) {
-							var m = gs.party[i];
-							m.hp = m.stats.max_hp;
-						}
-						show_notif("We drank a lot of water.");
-						when(
-							function() { return is_instanceof(global.game_state, GS_Dungeon); }, [],
-							show_notif, ["Somehow, we feel much better"]
-						);
+						play_sfx(sfx_splash1, gs.player.pos);
+						after(irandom_range(0, 200), play_sfx, [sfx_splash2, gs.player.pos]);
+						after(500, function(gs, t) {
+							t.open = current_time;
+							for (var i=0; i<array_length(gs.party); i++) {
+								var m = gs.party[i];
+								m.hp = m.stats.max_hp;
+							}
+							play_sfx(choose(sfx_splash1, sfx_splash2), gs.player.pos);
+						}, [gs, self]);
+						gs.level_transition(-1, ["We drank a lot of water.", "Somehow, we feel much better."]);
 					}
 				} else {
 					gs.interacted_with_well = true;

@@ -108,31 +108,3 @@ function options_menu(ui) {
     ui.end_container();
 }
 
-/// @type {Asset.GMSound}
-global.current_bgm = undefined;
-
-/// @param {Asset.GMSound} track
-function set_bgm(track) {
-    if (global.options.audio_mute) {
-        global.current_bgm = undefined;
-        audio_stop_all();
-        return;
-    }
-
-    if (!is_undefined(track) && global.current_bgm == track) {
-        return;
-    }
-
-    if (!is_undefined(global.current_bgm)) {
-        audio_sound_gain(global.current_bgm, 0, 500);
-        after(500, audio_stop_sound, [global.current_bgm]);
-    }
-
-    global.current_bgm = track;
-    if (!is_undefined(track)) {
-        audio_play_sound(global.current_bgm, 1, true);
-        audio_sound_gain(global.current_bgm, 0, 0);
-        audio_sound_gain(global.current_bgm, 1, 500);
-    }
-}
-

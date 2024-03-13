@@ -336,6 +336,14 @@ function animation_play(model, inst_name, anim_name, spd, lerp_spd, reset=false)
 	inst.step(1);
 }
 
+/// @param {string} model
+/// @param {string} inst_name
+function animation_timer(model, inst_name) {
+	var inst = get_anim_inst(model, inst_name);
+	if (is_undefined(inst)) return -1;
+	return inst.timer;
+}
+
 /// @type {Array<Struct._ExecAfter>}
 global.exec_queue = [];
 
@@ -362,6 +370,18 @@ function _ExecAfter(_fn, _args, _time) : _ExecFnBase(_fn, _args) constructor {
 /// @param {Array} args
 function after(time, fn, args) {
 	array_push(global.exec_queue, new _ExecAfter(fn, args, current_time+time));
+}
+
+/// @param {real} time
+/// @param {real} repeats
+/// @param {Function} fn
+/// @param {Array} args
+function timed_sequence(time, repeats, fn, args) {
+    var offset = time;
+    for (var i=0; i<repeats; i++) {
+        after(offset, fn, args);
+        offset += time;
+    }
 }
 
 /// @param {Function} _cond_fn

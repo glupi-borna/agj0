@@ -373,6 +373,8 @@ function Dungeon_Party(tex) constructor {
 
     state = DP_STATE.IDLE;
 
+    last_anim_timer = -1;
+
     /// @param {Struct.Dungeon_Player}
     static target_pos = function(p) {
         var target = p.pos.copy().subv(p.fwd.copy().scale(16));
@@ -417,9 +419,18 @@ function Dungeon_Party(tex) constructor {
         if (movement.len() > 1) {
             var anim_spd = 0.0075 * movement.len();
             animation_play("char", $"party:{formation_offset}", "run", anim_spd, 0.2);
+
+            var current_timer = animation_timer("char", $"party:{formation_offset}");
+            if (last_anim_timer > 0.5 && current_timer < 0.5) {
+                play_sfx(choose(sfx_step1, sfx_step2, sfx_step3), pos);
+            } else if (last_anim_timer < 0.5 && current_timer > 0.5) {
+                play_sfx(choose(sfx_step1, sfx_step2, sfx_step3), pos);
+            }
         } else {
             animation_play("char", $"party:{formation_offset}", "idle", 0.015, 0.2);
         }
+
+        last_anim_timer = animation_timer("char", $"party:{formation_offset}");
     }
 
     static render = function() {
@@ -443,6 +454,8 @@ function Dungeon_Player() constructor {
     movement = new v3(0, 0, 0);
     fwd = new v3(1, 1, 0).normalize();
 
+    last_anim_timer = -1;
+
     /// @param {Struct.Dungeon} dungeon
     static update = function (dungeon) {
         var old_pos = pos.copy();
@@ -464,7 +477,16 @@ function Dungeon_Player() constructor {
             var mv_dir = point_direction(0, 0, movement.x, movement.y);
             var anim_spd = 0.0075 * movement.len();
             animation_play("char", "player", "run", anim_spd, 0.2);
+
+            var current_timer = animation_timer("char", "player");
+            if (last_anim_timer > 0.5 && current_timer < 0.5) {
+                play_sfx(choose(sfx_step1, sfx_step2, sfx_step3), pos);
+            } else if (last_anim_timer < 0.5 && current_timer > 0.5) {
+                play_sfx(choose(sfx_step1, sfx_step2, sfx_step3), pos);
+            }
         }
+
+        last_anim_timer = animation_timer("char", "player");
     }
 
     static render = function() {
@@ -640,6 +662,8 @@ function GS_Dungeon() : Game_State() constructor {
 
     /// @type {Struct.Dungeon_Player}
     player = new Dungeon_Player();
+    cam_pos = new v3(0, 0, 0);
+    cam_fwd = new v3(0, 0, 0);
 
     when(
         function() { return !is_undefined(get_anim_inst("char", "player")); }, [],
@@ -903,7 +927,7 @@ function GS_Dungeon() : Game_State() constructor {
         }
 
         var camera = camera_get_active();
-        var cam_pos = player.pos.copy().add(0, 0, 20);
+        cam_pos.setv(player.pos).add(0, 0, 20);
         var target_cam_pos = cam_pos.copy().addv(
             player.fwd.copy().neg().scale(64) // Move camera back
         ).addv(
@@ -913,6 +937,7 @@ function GS_Dungeon() : Game_State() constructor {
 
         cam_pos = get_cam_pos(dungeon, cam_pos, target_cam_pos);
         cam_pos.add(0, 0, ease_io_cubic(interact_tile_time/500)*48);
+        cam_fwd = lookat.copy().subv(cam_pos);
 
         camera_set_view_mat(camera, matrix_build_lookat(cam_pos.x, cam_pos.y, cam_pos.z, lookat.x, lookat.y, lookat.z, 0, 0, 1));
         camera_set_proj_mat(camera, matrix_build_projection_perspective_fov(-60, -WW/WH, 1, 32000));

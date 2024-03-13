@@ -122,6 +122,13 @@ function Seq_Move(_char, _target, _time) constructor {
     time = _time;
 }
 
+/// @param {Asset.GMSound} _sfx
+/// @param {Struct.v3} _pos
+function Seq_Sfx(_sfx, _pos) constructor {
+    sfx = _sfx;
+    pos = _pos;
+}
+
 /// @param {real} _time
 function Seq_Wait(_time) constructor {
     time = _time;
@@ -158,13 +165,13 @@ function GS_Battle(
     menu = BATTLE_MENU.MAIN;
     ui = new UI();
 
-    /// @type {Struct.Seq_Anim | Struct.Seq_Do | Struct.Seq_Move | Struct.Seq_Wait | Struct.Seq_Cam}
+    /// @type {Struct.Seq_Anim | Struct.Seq_Do | Struct.Seq_Move | Struct.Seq_Wait | Struct.Seq_Cam | Struct.Seq_Sfx}
     current_seq_item = undefined;
-    /// @type {Struct.Seq_Anim | Struct.Seq_Do | Struct.Seq_Move | Struct.Seq_Wait | Struct.Seq_Cam}
+    /// @type {Struct.Seq_Anim | Struct.Seq_Do | Struct.Seq_Move | Struct.Seq_Wait | Struct.Seq_Cam | Struct.Seq_Sfx}
     seq_item_start = undefined;
     /// @type {Struct.v3}
     lerp_from = undefined;
-    /// @type {Array<Struct.Seq_Anim | Struct.Seq_Do | Struct.Seq_Move | Struct.Seq_Wait | Struct.Seq_Cam>}
+    /// @type {Array<Struct.Seq_Anim | Struct.Seq_Do | Struct.Seq_Move | Struct.Seq_Wait | Struct.Seq_Cam | Struct.Seq_Sfx>}
     sequence = [];
 
     cam_target_pos = new v3(0, 0, 30);
@@ -288,7 +295,13 @@ function GS_Battle(
         var idx = array_get_index(turn_order, char);
         if (anim_name == "default") {
             if (char.hp == 0) {
-                anim_char(char, "death", spd, 0.2);
+                if (animation_name(char.model, $"battle:{idx}") != "death") {
+                    anim_char(char, "death", spd, 0.2);
+
+                    if (array_contains(enemies, char)) {
+                        after(250, play_sfx, [choose(sfx_nme_death1, sfx_nme_death2), char.look_pos()]);
+                    }
+                }
             } else if (char.hp < char.stats.max_hp*0.33) {
                 anim_char(char, "idle_hurt", spd, 0.2);
             } else {
@@ -374,6 +387,12 @@ function GS_Battle(
                     script_execute_ext(d.fn, d.args);
                     current_seq_item = undefined;
 
+                } else if (is_instanceof(current_seq_item, Seq_Sfx)) {
+                    /// @type {Struct.Seq_Sfx}
+                    var s = current_seq_item;
+                    play_sfx(s.sfx, s.pos);
+                    current_seq_item = undefined;
+
                 } else if (is_instanceof(current_seq_item, Seq_Cam)) {
                     /// @type {Struct.Seq_Cam}
                     var c = current_seq_item;
@@ -408,6 +427,8 @@ function GS_Battle(
                 new Seq_Move(enemy, target_pos, 500),
                 new Seq_Anim(enemy, "attack", 0.03),
                 new Seq_Wait(250),
+                new Seq_Sfx(choose(sfx_nme_attack1, sfx_nme_attack2), enemy.look_pos()),
+                new Seq_Sfx(choose(sfx_nme_slurp1, sfx_nme_slurp2, sfx_nme_slurp3), target.look_pos()),
                 new Seq_Anim(target, "damage", 0.02),
                 new Seq_Do(function(t, e){ t.damaged_by(e, 10); }, [target, enemy]),
                 new Seq_Wait(250),
@@ -534,10 +555,13 @@ function GS_Battle(
                                 new Seq_Anim(char, "walk", 0.01),
                                 new Seq_Move(char, target_pos, 100),
                                 new Seq_Anim(char, "item", 0.01),
-                                new Seq_Wait(1000),
+                                new Seq_Wait(700),
+                                new Seq_Sfx(choose(sfx_swing1, sfx_swing2, sfx_swing3), char.look_pos()),
+                                new Seq_Wait(500),
                                 new Seq_Cam(new_cam_pos2, e.look_pos()),
                                 new Seq_Wait(250),
                                 new Seq_Anim(e, "damage", 0.02),
+                                new Seq_Sfx(choose(sfx_punch1, sfx_punch2), e.pos),
                                 is_undefined(menu_item)
                                     ? new Seq_Do(function(t, c){ t.damaged_by(c, 100); }, [e, char])
                                     : new Seq_Do(function(t, c, i){ i.effect(c, t); }, [e, char, menu_item]),
