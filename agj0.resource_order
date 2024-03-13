@@ -105,6 +105,7 @@
     {"name":"spr_brick","order":1,"path":"sprites/spr_brick/spr_brick.yy",},
     {"name":"spr_chest","order":4,"path":"sprites/spr_chest/spr_chest.yy",},
     {"name":"spr_concrete","order":9,"path":"sprites/spr_concrete/spr_concrete.yy",},
+    {"name":"spr_eye_icon","order":18,"path":"sprites/spr_eye_icon/spr_eye_icon.yy",},
     {"name":"spr_eye","order":6,"path":"sprites/spr_eye/spr_eye.yy",},
     {"name":"spr_girl_icon","order":15,"path":"sprites/spr_girl_icon/spr_girl_icon.yy",},
     {"name":"spr_girl","order":16,"path":"sprites/spr_girl/spr_girl.yy",},
@@ -116,6 +117,5 @@
     {"name":"spr_suit_icon","order":17,"path":"sprites/spr_suit_icon/spr_suit_icon.yy",},
     {"name":"spr_suit","order":2,"path":"sprites/spr_suit/spr_suit.yy",},
     {"name":"spr_well","order":12,"path":"sprites/spr_well/spr_well.yy",},
-    {"name":"spr_eye_icon","order":18,"path":"sprites/spr_eye_icon/spr_eye_icon.yy",},
   ],
 }
