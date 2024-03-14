@@ -164,14 +164,22 @@ function move(d, pos, x, y, radius) {
 /// @param {real} _lvl
 /// @param {real} _max_hp
 /// @param {real} _speed
+/// @param {real} _attack
 function Stats(
     _lvl,
     _max_hp,
-    _speed
+    _speed,
+    _attack
 ) constructor {
     lvl = _lvl
     max_hp = _max_hp;
     speed = _speed;
+    attack = _attack;
+    xp = 0;
+}
+
+function lvl_xp(_lvl) {
+    return 20*_lvl;
 }
 
 /// @param {string} _name
@@ -197,7 +205,7 @@ function Enemy(_name, _model, _tex, _size, _floating, _stats) constructor {
 function mouth(lvl) {
     return new Enemy(
         "Mouth", "mouth", spr_mouth, 12, true,
-        new Stats(lvl, 3+lvl, 1+floor(lvl*0.5))
+        new Stats(lvl, floor(4+lvl*4), floor(2+lvl*0.5), floor(3+lvl*0.5))
     );
 }
 
@@ -205,20 +213,16 @@ function mouth(lvl) {
 function eye(lvl) {
     return new Enemy(
         "Eye", "eye", spr_eye, 10, true,
-        new Stats(lvl, 3+lvl, 1+floor(lvl*0.5))
+        new Stats(lvl, floor(5+lvl*5), floor(3+lvl*0.5), floor(2+lvl*0.25))
     );
-}
-
-
-function get_enemy(lvl) {
-    var fn = choose(mouth, mouth);
-    return fn(lvl);
 }
 
 enum DE_STATE { WAIT, WANDER, CHASE, ATTACK };
 
 /// @param {Struct.Enemy} _data
-function Dungeon_Enemy(_data) : Interactive() constructor {
+/// @param {real} _idx
+function Dungeon_Enemy(_data, _idx) : Interactive() constructor {
+    idx = _idx;
     data = _data;
     pos = new v3(0, 0, 0);
     fwd = new v3(1, 1, 0).normalize();
@@ -236,8 +240,9 @@ function Dungeon_Enemy(_data) : Interactive() constructor {
         /// @type {Struct.GS_Dungeon}
         var d = global.game_state;
 
+        var edir = fwd.xy().angle();
         var pdir = d.player.pos.copy().subv(pos).xy().angle();
-        if (abs(angle_difference(0, pdir)) > 90) {
+        if (abs(angle_difference(edir, pdir)) > 90) {
             return "Sneak attack";
         } else {
             return "Attack";
@@ -273,9 +278,9 @@ function Dungeon_Enemy(_data) : Interactive() constructor {
 
     /// @param {Struct.Dungeon} d
     /// @param {Struct.Dungeon_Player} p
-    static update = function(d, p) {
+    static update = function(d, p, override=false) {
         var player_dist = point_distance_3d(p.pos.x, p.pos.y, p.pos.z, pos.x, pos.y, pos.z);
-        if (player_dist > TILE_SIZE*15) return;
+        if (player_dist > TILE_SIZE*15 && !override) return;
 
         switch (state) {
             case DE_STATE.ATTACK:
@@ -285,14 +290,15 @@ function Dungeon_Enemy(_data) : Interactive() constructor {
                     var gs = global.game_state;
                     gs.start_battle(pos.x, pos.y, INITIATIVE.ENEMY);
                     state = DE_STATE.CHASE;
+                    animation_play(data.model, $"{data.name}{idx}:dungeon", "idle", 0.01, 1);
                 }
             break;
 
             case DE_STATE.CHASE:
-                animation_play(data.model, $"{data.name}:dungeon", "idle", 0.01, 1);
                 if (!can_see_player(d, p)) {
                     state_time = current_time;
                     state = DE_STATE.WANDER;
+                    animation_play(data.model, $"{data.name}{idx}:dungeon", "idle", 0.01, 1);
                     wait_time = irandom_range(5000, 10000);
                 } else {
                     fwd.setv(p.pos).subv(pos).normalize();
@@ -302,33 +308,35 @@ function Dungeon_Enemy(_data) : Interactive() constructor {
                         state = DE_STATE.ATTACK;
                         state_time = current_time;
                         wait_time = 500;
-                        animation_play(data.model, $"{data.name}:dungeon_attack", "attack", 0.03, 1, true);
+                        animation_play(data.model, $"{data.name}{idx}:dungeon", "attack", 0.03, 1, true);
                     }
                 }
             break;
 
             case DE_STATE.WAIT:
-                animation_play(data.model, $"{data.name}:dungeon", "idle", 0.01, 1);
                 if (current_time - state_time > wait_time) {
                     state_time = current_time;
                     fwd.set(random_range(-1, 1), random_range(-1, 1), 0).normalize();
                     state = DE_STATE.WANDER;
                     wait_time = irandom_range(5000, 10000);
+                    animation_play(data.model, $"{data.name}{idx}:dungeon", "idle", 0.01, 1);
                 }
             break;
 
             case DE_STATE.WANDER:
-                animation_play(data.model, $"{data.name}:dungeon", "idle", 0.01, 1);
                 if (current_time - state_time > wait_time) {
                     state_time = current_time;
                     state = DE_STATE.WAIT;
                     wait_time = irandom_range(1000, 5000);
+                    animation_play(data.model, $"{data.name}{idx}:dungeon", "idle", 0.01, 1);
+                    break;
                 }
 
                 if (!move(d, pos, fwd.x*0.5, fwd.y*0.5, 6)) {
                     state_time = current_time;
                     state = DE_STATE.WAIT;
                     wait_time = irandom_range(1000, 3000);
+                    animation_play(data.model, $"{data.name}{idx}:dungeon", "idle", 0.01, 1);
                 }
             break;
         }
@@ -336,6 +344,7 @@ function Dungeon_Enemy(_data) : Interactive() constructor {
         if (state != DE_STATE.CHASE && state != DE_STATE.ATTACK) {
             if (can_see_player(d, p)) {
                 state = DE_STATE.CHASE;
+                animation_play(data.model, $"{data.name}{idx}:dungeon", "idle", 0.01, 1);
             }
         }
     }
@@ -361,11 +370,7 @@ function Dungeon_Enemy(_data) : Interactive() constructor {
         ));
 
         shader_set(sh_smf_animate);
-        if (state == DE_STATE.ATTACK) {
-            render_model_simple(data.model, $"{data.name}:dungeon_attack", data.texture);
-        } else {
-            render_model_simple(data.model, $"{data.name}:dungeon", data.texture);
-        }
+        render_model_simple(data.model, $"{data.name}{idx}:dungeon", data.texture);
         shader_reset();
     }
 }
@@ -549,7 +554,7 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
     static go_to_dungeon = function() {
         gs.max_depth = max(to_lvl, gs.max_depth);
 
-        if (to_lvl != -1) {
+        if (to_lvl != -1 && to_lvl != from_lvl) {
             gs.lvl = to_lvl;
             gs.generate_dungeon();
         }
@@ -572,7 +577,6 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
 
     /// @param {Array<string>} _msgs
     static first_time_msg = function(_msgs) {
-        print("TO", to_lvl, "MAX", gs.max_depth);
         if (gs.max_depth >= to_lvl) return [];
         return _msgs;
     }
@@ -591,10 +595,14 @@ function GS_Level_Transition(from_lvl, to_lvl, gs, _msgs=undefined) : Game_State
                 ]);
             } else if (from_lvl == 1 && to_lvl == 2) {
                 msgs = first_time_msg(["The floors rumble and the walls shift\neach time we descend."]);
+            } else if (from_lvl == 2 && to_lvl == 3) {
+                msgs = first_time_msg(["What awaits us at the bottom?", "Is there a bottom?"]);
             } else if (from_lvl == 3 && to_lvl == 4) {
-                msgs = first_time_msg(["Those things are getting tougher."]);
+                msgs = first_time_msg(["Pure creation, emanating from everything.", "Terrifying."]);
             } else if (from_lvl == 4 && to_lvl == 5) {
-                msgs = first_time_msg(["..."]);
+                msgs = first_time_msg(["I have poured my heart and soul into this game.", "Thank you for playing."]);
+            } else if (from_lvl == 5 && to_lvl == 6) {
+                msgs = first_time_msg(["There is no  more content from here on out.", "The enemies will keep getting tougher, though.", "Good luck."]);
             } else if (from_lvl == to_lvl) {
                 msgs = [
                     choose(
@@ -685,17 +693,17 @@ function GS_Dungeon() : Game_State() constructor {
     party = [
         new Character(
             "Green",
-            new Stats(1, 10, 3),
+            new Stats(1, 10, 4, 2),
             "char", spr_player, 12, false
         ),
         new Character(
             "Suit",
-            new Stats(1, 10, 3),
+            new Stats(1, 15, 2, 1),
             "char", spr_suit, 12, false
         ),
         new Character(
             "Girl",
-            new Stats(1, 10, 3),
+            new Stats(1, 5, 3, 3),
             "char", spr_girl, 12, false
         )
     ];
@@ -803,12 +811,17 @@ function GS_Dungeon() : Game_State() constructor {
         var dir = point_direction(0, 0, player.fwd.x, player.fwd.y)-45;
         draw_sprite_ext(spr_arrow, 0, offx, offy, gui_px(0.125), gui_px(0.125), dir, c_white, 1);
 
-        if (entering()||exitting()) {
-            draw_set_color(c_black);
-            draw_set_alpha(1-animate_io());
-            draw_rectangle(0, 0, WW, WH, false);
-            draw_set_alpha(1);
-        }
+        var tp = gui_px(4); var tm = gui_px(8);
+        var tw = text_width($"Floor -{lvl}");
+        var th = text_height(" ");
+        var x1 = WW - tp*2 - tw - tm;
+        var x2 = WW - tm;
+        var y1 = tm;
+        var y2 = tm + tp*2 + th;
+        draw_set_color(c_red);
+        draw_rectangle(x1, y1, x2, y2, false);
+        draw_set_color(c_white);
+        render_text(x1+tp, y1+tp, $"Floor -{lvl}");
 
         /// TODO: Make popup a global thing so that the exit animation will not be bound to game_state
         static popup_width = 0;
@@ -830,6 +843,13 @@ function GS_Dungeon() : Game_State() constructor {
             if (popup_width > target_width-gui_px(pad)) {
                 render_text(WW*3/4-half+pad/2, WH/2+pad/2, label);
             }
+        }
+
+        if (entering()||exitting()) {
+            draw_set_color(c_black);
+            draw_set_alpha(1-animate_io());
+            draw_rectangle(0, 0, WW, WH, false);
+            draw_set_alpha(1);
         }
 
         draw_set_color(c_white);
@@ -919,7 +939,7 @@ function GS_Dungeon() : Game_State() constructor {
         }
     }
 
-    static render = function() {
+    static render = function(od_cam_pos=undefined, od_lookat=undefined) {
         do_3d();
         update_animations();
 
@@ -948,6 +968,9 @@ function GS_Dungeon() : Game_State() constructor {
         cam_pos.add(0, 0, ease_io_cubic(interact_tile_time/500)*48);
         cam_fwd = lookat.copy().subv(cam_pos);
 
+        if (!is_undefined(od_lookat)) { lookat.setv(od_lookat); }
+        if (!is_undefined(od_cam_pos)) { cam_pos.setv(od_cam_pos); }
+
         camera_set_view_mat(camera, matrix_build_lookat(cam_pos.x, cam_pos.y, cam_pos.z, lookat.x, lookat.y, lookat.z, 0, 0, 1));
         camera_set_proj_mat(camera, matrix_build_projection_perspective_fov(-60, -WW/WH, 1, 32000));
         camera_apply(camera);
@@ -955,7 +978,7 @@ function GS_Dungeon() : Game_State() constructor {
         for (var yy=0; yy<dungeon.height; yy++) {
             for (var xx=0; xx<dungeon.width; xx++) {
 
-                if (point_distance(player.pos.x, player.pos.y, xx*TILE_SIZE, yy*TILE_SIZE) > 400) continue;
+                if (point_distance(cam_pos.x, cam_pos.y, xx*TILE_SIZE, yy*TILE_SIZE) > 450) continue;
 
                 var t = dungeon.tile_at(xx, yy);
                 if (t.is_floor()) render_floor(xx, yy);
@@ -1084,6 +1107,7 @@ function GS_Dungeon_Dialog(_root_gs, _dialog) : Game_State() constructor {
     }
 
     static update = function() {
+        if (exitting()) return;
         if (kbd_down(vk_enter, "Enter", "Continue")) {
             set_game_state(root_gs, false, true);
         }

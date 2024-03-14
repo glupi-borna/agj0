@@ -279,7 +279,8 @@ function ensure_pixelation() {
 		display_get_gui_width() != WW ||
 		display_get_gui_height() != WH
 	) {
-		surface_resize(application_surface, WW/2, WH/2);
+		if (WW == 0 || WH == 0) return;
+		surface_resize(application_surface, ceil(WW/2), ceil(WH/2));
 		display_set_gui_size(WW, WH);
 	}
 }
@@ -306,6 +307,12 @@ function mtx_mul() {
 		mat = matrix_multiply(mat, argument[i]);
 	}
 	return mat;
+}
+
+function animation_exists(model, anim_name) {
+	var m = get_model(model);
+	if (is_undefined(m)) return false;
+	return !is_undefined(m.animMap[? anim_name]);
 }
 
 /// @param {string} model

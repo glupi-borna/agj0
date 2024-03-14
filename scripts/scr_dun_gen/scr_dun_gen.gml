@@ -13,13 +13,6 @@ enum TILE {
 };
 
 randomize();
-print("SEED", random_get_seed());
-print("SEED", random_get_seed());
-print("SEED", random_get_seed());
-print("SEED", random_get_seed());
-print("SEED", random_get_seed());
-print("SEED", random_get_seed());
-print("SEED", random_get_seed());
 
 /// @param {Struct.Game_State} gs
 /// @returns {Struct.GS_Dungeon}
@@ -28,6 +21,7 @@ function get_dungeon_gs(gs=undefined) {
 	if (is_instanceof(gs, GS_Dungeon)) return gs;
 	if (variable_struct_exists(gs, "gs")) return get_dungeon_gs(gs.gs);
 	if (variable_struct_exists(gs, "root_gs")) return get_dungeon_gs(gs.root_gs);
+	if (variable_struct_exists(gs, "battle_gs")) return get_dungeon_gs(gs.battle_gs);
 	return undefined;
 }
 
@@ -393,7 +387,7 @@ function Room(_x, _y, _w, _h) : Rect(_x, _y, _w, _h) constructor {
 	static fill = function(d) {
 		for (var xx=0; xx<w; xx++) {
 			for (var yy=0; yy<h; yy++) {
-				if (irandom(100) < 1) {
+				if (irandom(100) < 2) {
 					tile(d, x+xx, y+yy, choose(TILE.LARGE_CHEST, TILE.SMALL_CHEST, TILE.SMALL_CHEST));
 				} else {
 					tile(d, x+xx, y+yy, TILE.FLOOR);
@@ -1058,7 +1052,8 @@ function Dungeon(_w, _h) constructor {
 		}
 
 		array_resize(gs.enemies, 0);
-		for (var i=0; i<10; i++) {
+		var amt = 0;
+		while (amt < 20) {
 			var r = pick_arr(rooms);
 			if (r == pr) continue;
 
@@ -1067,11 +1062,12 @@ function Dungeon(_w, _h) constructor {
 
 			/// @type {Function.enemy_fn_template}
 			var make_enemy = pick_arr(enemy_pool);
-			var e = new Dungeon_Enemy(make_enemy(lvl));
+			var e = new Dungeon_Enemy(make_enemy(lvl), amt);
 
 			e.pos.set(p.x+0.5, p.y+0.5, 0).scale(TILE_SIZE);
 
 			array_push(gs.enemies, e);
+			amt++;
 		}
 
 		return ok;

@@ -27,9 +27,17 @@ function set_bgm(track) {
 }
 
 function update_bgm() {
-	if (is_instanceof(global.game_state, GS_Battle)) set_bgm(mus_s1);
-	else if (!is_undefined(get_dungeon_gs())) set_bgm(mus_s2);
-	else set_bgm(undefined);
+	if (
+        is_instanceof(global.game_state, GS_Battle) ||
+        is_instanceof(global.game_state, GS_Menu_Lvl_Up) ||
+        is_instanceof(global.game_state, GS_Menu_Battle_Stats)
+    ) {
+        set_bgm(mus_s1);
+    } else if (!is_undefined(get_dungeon_gs())) {
+        set_bgm(mus_s2);
+    } else {
+        set_bgm(undefined);
+    }
 }
 
 /// @type {Array<Id.AudioEmitter>}
@@ -44,7 +52,6 @@ function get_sfx_emitter() {
     }
     var emitter = audio_emitter_create();
     audio_emitter_bus(emitter, global.dungeon_bus);
-    print($"Created {++global.num_emitters} total emitters");
     return emitter;
 }
 
@@ -82,4 +89,4 @@ function update_sfx() {
 }
 
 global.dungeon_bus = audio_bus_create();
-global.dungeon_bus.effects[0] = audio_effect_create(AudioEffectType.Reverb1, {size: 1, damp: 0.5, mix: 0.5});
+global.dungeon_bus.effects[0] = audio_effect_create(AudioEffectType.Reverb1, {size: 0.85, damp: 0.5, mix: 0.5});
